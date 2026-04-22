@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/db');
+const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 
 // Funnel Stages
 const stages = [
@@ -10,7 +11,7 @@ const stages = [
     "/payment"
 ];
 
-router.get('/funnel', async (req, res) => {
+router.get('/funnel', authMiddleware, adminMiddleware, async (req, res) => {
     try {
 
         const result = await pool.query(`
@@ -64,7 +65,7 @@ router.get('/funnel', async (req, res) => {
 
 
 // Heatmap API
-router.get('/heatmap', async (req, res) => {
+router.get('/heatmap', authMiddleware, adminMiddleware, async (req, res) => {
     try {
 
         const { page } = req.query;
@@ -90,7 +91,7 @@ router.get('/heatmap', async (req, res) => {
 });
 
 
-router.get('/predict/:session_id', async (req, res) => {
+router.get('/predict/:session_id', authMiddleware, adminMiddleware, async (req, res) => {
     try {
         const { session_id } = req.params;
 
@@ -123,7 +124,7 @@ router.get('/predict/:session_id', async (req, res) => {
     }
 });
 
-router.get('/scrollmap', async (req, res) => {
+router.get('/scrollmap', authMiddleware, adminMiddleware, async (req, res) => {
     const { page } = req.query;
 
     const result = await pool.query(
@@ -138,7 +139,7 @@ router.get('/scrollmap', async (req, res) => {
 });
 
 //sentiments endpoint
-router.post('/sentiment', async (req, res) => {
+router.post('/sentiment', authMiddleware, adminMiddleware, async (req, res) => {
     try {
 
         const { text } = req.body;

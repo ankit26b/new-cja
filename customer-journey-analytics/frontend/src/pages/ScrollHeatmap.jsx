@@ -1,14 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import simpleheat from "simpleheat";
+import { useAuth } from "../context/AuthContext";
 
 export default function ScrollHeatmap() {
 
     const canvasRef = useRef(null);
     const [page, setPage] = useState("/product");
+    const { token } = useAuth();
 
     useEffect(() => {
 
-        fetch(`http://localhost:5000/api/scrollmap?page=${page}`)
+        fetch(`http://localhost:5000/api/scrollmap?page=${page}`, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        })
             .then(res => res.json())
             .then(data => {
 
@@ -19,11 +25,11 @@ export default function ScrollHeatmap() {
                 const heat = simpleheat(canvas);
 
                 // 🔥 THIS IS WHERE YOU ADD IT
-                const points = data.map(item => [
+                const points = Array.isArray(data) ? data.map(item => [
                     200,                // fixed horizontal center
                     item.scroll_depth,  // vertical scroll position
                     1                   // intensity
-                ]);
+                ]) : [];
 
                 heat.data(points);
                 heat.max(10);
@@ -31,7 +37,7 @@ export default function ScrollHeatmap() {
 
             });
 
-    }, [page]);
+    }, [page, token]);
 
     return (
         <div style={{ padding: 20 }}>

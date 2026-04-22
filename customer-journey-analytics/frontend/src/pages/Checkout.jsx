@@ -4,8 +4,6 @@ import "./Checkout.css";
 
 export default function Checkout() {
   const [text, setText] = useState("");
-  const [result, setResult] = useState(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [cartTotal, setCartTotal] = useState(0);
   const navigate = useNavigate();
 
@@ -14,31 +12,6 @@ export default function Checkout() {
     const total = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
     setCartTotal(total);
   }, []);
-
-  const submitFeedback = (e) => {
-    e.preventDefault();
-    if (!text.trim()) return;
-    
-    setIsAnalyzing(true);
-    fetch("http://localhost:5000/api/sentiment", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ text })
-    })
-      .then(res => res.json())
-      .then(data => {
-        setResult(data);
-        setIsAnalyzing(false);
-      })
-      .catch(err => {
-        console.error("Sentiment analysis failed", err);
-        setIsAnalyzing(false);
-      });
-  };
-
-  const sentimentClass = result ? result.label.toLowerCase() : "";
 
   return (
     <div className="checkoutContainer">
@@ -78,7 +51,7 @@ export default function Checkout() {
           <section className="checkoutSection">
             <h2>Order Note / Feedback</h2>
             <p style={{ color: "var(--text-secondary)", marginBottom: "1.5rem", fontSize: "0.95rem" }}>
-              Leave a note for your order. Our live AI sentiment analyzer will read it to ensure we provide the best service possible!
+              Leave a note for your order.
             </p>
             <div className="formGroup fullWidth">
               <textarea
@@ -88,26 +61,6 @@ export default function Checkout() {
                 onChange={(e) => setText(e.target.value)}
               />
             </div>
-            <button 
-              className="primary" 
-              style={{ marginTop: "1rem" }} 
-              onClick={submitFeedback}
-              disabled={isAnalyzing || !text.trim()}
-            >
-              {isAnalyzing ? "Analyzing..." : "Analyze Sentiment"}
-            </button>
-
-            {result && (
-              <div className="sentimentBox">
-                <div className="sentimentResult">
-                  <h3>Sentiment: {result.label}</h3>
-                  <p>Confidence Score: {(result.score * 100).toFixed(1)}%</p>
-                </div>
-                <div className={`sentimentBadge ${sentimentClass}`}>
-                  {result.label}
-                </div>
-              </div>
-            )}
           </section>
         </div>
 

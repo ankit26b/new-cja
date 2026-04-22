@@ -1,24 +1,35 @@
 import { useEffect, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
+import { useAuth } from "../context/AuthContext";
 
 
 
 export default function Dashboard() {
 
+  const { token, user, logout } = useAuth();
+
   const [data, setData] = useState([]);
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/funnel")
+    fetch("http://localhost:5000/api/funnel", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
       .then(res => res.json())
       .then(data => setData(data));
-  }, []);
+  }, [token]);
 
   const [risk, setRisk] = useState(null);
 
   function checkRisk() {
     const sessionId = sessionStorage.getItem("cja_session_id");
 
-    fetch(`http://localhost:5000/api/predict/${sessionId}`)
+    fetch(`http://localhost:5000/api/predict/${sessionId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
       .then(res => res.json())
       .then(data => setRisk(data));
   }
@@ -26,6 +37,10 @@ export default function Dashboard() {
   return (
     <>
       <div style={{ padding: 40 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <h2>Welcome, {user?.email} ({user?.role})</h2>
+          <button onClick={logout}>Logout</button>
+        </div>
         <h1>Funnel Analysis</h1>
 
         <BarChart width={600} height={300} data={data}>

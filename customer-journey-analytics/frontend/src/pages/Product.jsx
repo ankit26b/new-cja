@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
-import simpleheat from "simpleheat";
+import { useState } from "react";
 import "./Product.css";
 
 export default function Product() {
@@ -28,36 +27,6 @@ export default function Product() {
     setAddedMessage("Added to Cart!");
     setTimeout(() => setAddedMessage(""), 2000);
   };
-
-  useEffect(() => {
-    const canvas = document.getElementById("heatmapCanvas");
-    if (!canvas) return;
-
-    // Wait a tick for the DOM to fully render the CSS dimensions
-    setTimeout(() => {
-      canvas.width = Math.max(document.body.scrollWidth, document.documentElement.scrollWidth);
-      canvas.height = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
-
-      const heat = simpleheat(canvas);
-
-      fetch("http://localhost:5000/api/heatmap?page=/product")
-        .then(res => res.json())
-        .then(data => {
-          if(!data || data.length === 0) return;
-          const points = data.map(point => [
-            point.x,
-            point.y,
-            1
-          ]);
-
-          heat.data(points);
-          heat.max(5);
-          heat.draw();
-        })
-        .catch(err => console.error("Could not load heatmap data:", err));
-    }, 100);
-
-  }, []);
 
   return (
     <div id="productContainer" className="productPageContainer">
@@ -132,18 +101,6 @@ export default function Product() {
           <p>I just kept scrolling and scrolling and the battery never died! A true testament to the 40hr lifespan.</p>
         </div>
       </div>
-
-      {/* Heatmap Canvas Overlay */}
-      <canvas
-        id="heatmapCanvas"
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          zIndex: 9999,
-          pointerEvents: "none"
-        }}
-      />
     </div>
   );
 }

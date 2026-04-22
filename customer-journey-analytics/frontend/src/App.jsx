@@ -9,6 +9,9 @@ import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import Payment from "./pages/Payment";
 import Dashboard from "./pages/Dashboard";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (
@@ -16,16 +19,33 @@ function App() {
       <PageTracker />
 
       <Routes>
+        {/* Public Store Routes */}
         <Route path="/" element={<Home />} />
         <Route path="/product" element={<Product />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/payment" element={<Payment />} />
-        <Route path="/dashboard" element={<Dashboard/>} />
 
-        <Route path="/heatmap" element={<Heatmap />} />
-        
-        <Route path="/scroll-heatmap" element={<ScrollHeatmap />} />
+        {/* Auth Routes */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+
+        {/* Admin Protected Routes */}
+        <Route path="/dashboard" element={
+          <ProtectedRoute adminOnly>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/heatmap" element={
+          <ProtectedRoute adminOnly>
+            <Heatmap />
+          </ProtectedRoute>
+        } />
+        <Route path="/scroll-heatmap" element={
+          <ProtectedRoute adminOnly>
+            <ScrollHeatmap />
+          </ProtectedRoute>
+        } />
       </Routes>
     </>
     

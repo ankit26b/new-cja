@@ -11,6 +11,7 @@ const app = express();
 
 const trackingRoutes = require('./routes/tracking');
 const analyticsRoutes = require('./routes/analytics');
+const authRoutes = require('./routes/auth');
 
 
 
@@ -18,6 +19,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use('/api/auth', authRoutes);
 app.use('/api', trackingRoutes);
 app.use('/api', analyticsRoutes);
 
