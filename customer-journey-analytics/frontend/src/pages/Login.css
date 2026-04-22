@@ -79,6 +79,15 @@
     text-align: center;
 }
 
+.success-message {
+    background: #e9f9ef;
+    color: #1e874b;
+    padding: 12px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
 .register-link, .back-link {
     text-align: center;
     margin-top: 20px;

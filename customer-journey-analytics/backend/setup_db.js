@@ -1,4 +1,6 @@
 const pool = require('./config/db');
+const bcrypt = require('bcryptjs');
+require('dotenv').config();
 
 async function createTables() {
   try {
@@ -48,6 +50,24 @@ async function createTables() {
 
     console.log('✅ events table created');
     console.log('Database setup complete!');
+
+    // Optional admin seed from environment variables
+    const { ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_USERNAME } = process.env;
+    if (ADMIN_EMAIL && ADMIN_PASSWORD && ADMIN_USERNAME) {
+      const adminCountResult = await pool.query(
+        "SELECT COUNT(*)::int AS count FROM users WHERE role = 'admin'"
+      );
+      if (adminCountResult.rows[0].count === 0) {
+        const hashedPassword = await bcrypt.hash(ADMIN_PASSWORD, 10);
+        await pool.query(
+          'INSERT INTO users (email, password, role) VALUES ($1, $2, $3)',
+          [ADMIN_EMAIL, hashedPassword, 'admin']
+        );
+        console.log(`✅ Admin user seeded: ${ADMIN_EMAIL}`);
+      } else {
+        console.log('ℹ️  Admin already exists — skipping seed.');
+      }
+    }
 
   } catch (err) {
     console.error('Error creating tables:', err);

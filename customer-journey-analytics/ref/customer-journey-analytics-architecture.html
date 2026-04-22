@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Customer Journey Analytics System — Architecture</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Nunito+Sans:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:        #0a0c12;
+    --surface:   #111420;
+    --surface2:  #181c2e;
+    --border:    #242840;
+    --accent1:   #4f8aff;   /* blue  */
+    --accent2:   #a78bfa;   /* violet */
+    --accent3:   #34d399;   /* emerald */
+    --accent4:   #fb923c;   /* amber */
+    --accent5:   #f472b6;   /* pink */
+    --text:      #e2e8f0;
+    --muted:     #7c84a0;
+    --heading:   #ffffff;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Nunito Sans', sans-serif;
+    font-size: 15px;
+    line-height: 1.75;
+    padding: 0 0 80px;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    position: relative;
+    overflow: hidden;
+    padding: 80px 40px 60px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 70% 60% at 20% 0%, rgba(79,138,255,.18) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 55% at 80% 10%, rgba(167,139,250,.15) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 40% at 50% 100%, rgba(52,211,153,.10) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-tag {
+    display: inline-block;
+    background: rgba(79,138,255,.15);
+    border: 1px solid rgba(79,138,255,.4);
+    color: var(--accent1);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    padding: 4px 14px;
+    border-radius: 20px;
+    margin-bottom: 22px;
+  }
+  .hero h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(28px, 5vw, 52px);
+    color: var(--heading);
+    line-height: 1.15;
+    max-width: 760px;
+    margin: 0 auto 16px;
+  }
+  .hero h1 em {
+    font-style: italic;
+    color: var(--accent2);
+  }
+  .hero .subtitle {
+    color: var(--muted);
+    font-size: 15px;
+    max-width: 560px;
+    margin: 0 auto 36px;
+  }
+  .hero-meta {
+    display: flex;
+    justify-content: center;
+    gap: 28px;
+    flex-wrap: wrap;
+  }
+  .hero-meta span {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+  .hero-meta span strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* ── NAV PILLS ── */
+  .nav-pills {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 24px 40px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: rgba(10,12,18,.92);
+    backdrop-filter: blur(14px);
+    z-index: 100;
+  }
+  .nav-pills a {
+    font-size: 11.5px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    text-decoration: none;
+    padding: 5px 13px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    transition: all .2s;
+    white-space: nowrap;
+  }
+  .nav-pills a:hover {
+    color: var(--accent1);
+    border-color: var(--accent1);
+    background: rgba(79,138,255,.08);
+  }
+
+  /* ── LAYOUT ── */
+  .wrapper {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* ── SECTION ── */
+  .section {
+    margin-top: 64px;
+    scroll-margin-top: 70px;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  .section-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px 9px;
+    flex-shrink: 0;
+  }
+  .section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(20px, 3vw, 26px);
+    color: var(--heading);
+  }
+  .section-accent {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--border) 0%, transparent 100%);
+  }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 12px 12px 0 0;
+  }
+  .card.blue::before   { background: linear-gradient(90deg, var(--accent1), var(--accent2)); }
+  .card.green::before  { background: linear-gradient(90deg, var(--accent3), var(--accent1)); }
+  .card.amber::before  { background: linear-gradient(90deg, var(--accent4), var(--accent5)); }
+  .card.violet::before { background: linear-gradient(90deg, var(--accent2), var(--accent5)); }
+  .card.teal::before   { background: linear-gradient(90deg, var(--accent3), var(--accent2)); }
+  .card.pink::before   { background: linear-gradient(90deg, var(--accent5), var(--accent4)); }
+
+  .card-title {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--heading);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .blue  .dot { background: var(--accent1); }
+  .green .dot { background: var(--accent3); }
+  .amber .dot { background: var(--accent4); }
+  .violet .dot { background: var(--accent2); }
+  .teal  .dot { background: var(--accent3); }
+  .pink  .dot { background: var(--accent5); }
+
+  .card p { color: var(--text); font-size: 14px; margin-bottom: 10px; }
+  .card p:last-child { margin-bottom: 0; }
+
+  ul.clean {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  ul.clean li {
+    font-size: 14px;
+    color: var(--text);
+    padding: 5px 0 5px 20px;
+    position: relative;
+    border-bottom: 1px solid rgba(255,255,255,.03);
+  }
+  ul.clean li:last-child { border-bottom: none; }
+  ul.clean li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  ul.clean li strong { color: var(--heading); font-weight: 600; }
+  ul.clean li em { color: var(--muted); font-style: normal; font-size: 12.5px; }
+
+  /* ── TWO-COL GRID ── */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media(max-width:660px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  /* ── FLOW DIAGRAM ── */
+  .flow-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12.5px;
+    overflow-x: auto;
+    margin-bottom: 16px;
+  }
+  .flow-line {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0;
+    margin: 6px 0;
+  }
+  .flow-node {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 13px;
+    color: var(--text);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .flow-node.blue   { border-color: rgba(79,138,255,.5);  color: var(--accent1); }
+  .flow-node.green  { border-color: rgba(52,211,153,.5);  color: var(--accent3); }
+  .flow-node.violet { border-color: rgba(167,139,250,.5); color: var(--accent2); }
+  .flow-node.amber  { border-color: rgba(251,146,60,.5);  color: var(--accent4); }
+  .flow-node.pink   { border-color: rgba(244,114,182,.5); color: var(--accent5); }
+  .flow-arrow {
+    color: var(--muted);
+    padding: 0 8px;
+    font-size: 14px;
+  }
+  .flow-section-label {
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 14px 0 6px;
+  }
+
+  /* ── ARCH DIAGRAM ── */
+  .arch-diagram {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 32px 28px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 20px;
+    align-items: start;
+    margin-bottom: 20px;
+  }
+  @media(max-width:700px) {
+    .arch-diagram { grid-template-columns: 1fr; }
+    .arch-center { display: none; }
+  }
+  .arch-col { display: flex; flex-direction: column; gap: 12px; }
+  .arch-col-title {
+    font-size: 10px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 4px;
+    text-align: center;
+  }
+  .arch-box {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 13px;
+    text-align: center;
+    background: var(--surface);
+  }
+  .arch-box.blue   { border-color: rgba(79,138,255,.4);  background: rgba(79,138,255,.06); }
+  .arch-box.green  { border-color: rgba(52,211,153,.4);  background: rgba(52,211,153,.06); }
+  .arch-box.violet { border-color: rgba(167,139,250,.4); background: rgba(167,139,250,.06); }
+  .arch-box.amber  { border-color: rgba(251,146,60,.4);  background: rgba(251,146,60,.06); }
+  .arch-box.shared { border-color: rgba(255,255,255,.15); background: rgba(255,255,255,.03); }
+  .arch-box .label { font-weight: 700; color: var(--heading); font-size: 13px; }
+  .arch-box .sub   { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+  .arch-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding-top: 28px;
+  }
+  .arch-center .line {
+    width: 1px;
+    height: 40px;
+    background: var(--border);
+  }
+  .arch-center .node-shared {
+    border: 1px solid rgba(255,255,255,.2);
+    border-radius: 10px;
+    padding: 10px 16px;
+    background: rgba(255,255,255,.04);
+    font-size: 12px;
+    text-align: center;
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  /* ── FUNNEL ── */
+  .funnel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    margin: 10px 0;
+  }
+  .funnel-step {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 560px;
+    padding: 10px 20px;
+    border-radius: 8px;
+    margin-bottom: 2px;
+    font-size: 13px;
+  }
+  .funnel-step .name { font-weight: 600; color: var(--heading); }
+  .funnel-step .bar-wrap { flex: 1; margin: 0 16px; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .funnel-step .bar { height: 100%; border-radius: 4px; transition: width .4s; }
+  .funnel-step .pct { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); min-width: 38px; text-align: right; }
+  .funnel-arrow { color: var(--muted); font-size: 12px; margin: 1px 0; text-align: center; width: 100%; max-width: 560px; }
+
+  /* ── TAG CHIPS ── */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .chip {
+    font-size: 11.5px;
+    font-family: 'DM Mono', monospace;
+    padding: 4px 11px;
+    border-radius: 16px;
+    border: 1px solid;
+  }
+  .chip.blue   { color: var(--accent1); border-color: rgba(79,138,255,.35); background: rgba(79,138,255,.07); }
+  .chip.green  { color: var(--accent3); border-color: rgba(52,211,153,.35); background: rgba(52,211,153,.07); }
+  .chip.violet { color: var(--accent2); border-color: rgba(167,139,250,.35); background: rgba(167,139,250,.07); }
+  .chip.amber  { color: var(--accent4); border-color: rgba(251,146,60,.35);  background: rgba(251,146,60,.07); }
+  .chip.pink   { color: var(--accent5); border-color: rgba(244,114,182,.35); background: rgba(244,114,182,.07); }
+
+  /* ── TABLE ── */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    margin-top: 8px;
+  }
+  .data-table th {
+    text-align: left;
+    padding: 10px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+  .data-table td {
+    padding: 11px 14px;
+    border-bottom: 1px solid rgba(255,255,255,.04);
+    color: var(--text);
+    vertical-align: top;
+  }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table td:first-child { color: var(--heading); font-weight: 600; }
+  .data-table td code {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    background: rgba(255,255,255,.06);
+    padding: 2px 7px;
+    border-radius: 4px;
+    color: var(--accent3);
+  }
+
+  /* ── BENEFITS GRID ── */
+  .benefit-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 22px;
+  }
+  .benefit-card .icon { font-size: 22px; margin-bottom: 10px; }
+  .benefit-card h4 { font-size: 14px; color: var(--heading); font-weight: 700; margin-bottom: 6px; }
+  .benefit-card p { font-size: 13px; color: var(--muted); line-height: 1.65; }
+
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+  @media(max-width:700px) { .grid-3 { grid-template-columns: 1fr; } }
+
+  /* ── PIPELINE ── */
+  .pipeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+    padding-left: 24px;
+  }
+  .pipeline::before {
+    content: '';
+    position: absolute;
+    left: 7px; top: 10px; bottom: 10px;
+    width: 2px;
+    background: linear-gradient(180deg, var(--accent1), var(--accent2), var(--accent3), var(--accent4));
+    border-radius: 2px;
+  }
+  .pipeline-step {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    position: relative;
+  }
+  .pipeline-step::before {
+    content: '';
+    position: absolute;
+    left: -21px;
+    top: 6px;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    border: 2px solid var(--bg);
+    flex-shrink: 0;
+  }
+  .step1::before { background: var(--accent1); }
+  .step2::before { background: var(--accent2); }
+  .step3::before { background: var(--accent3); }
+  .step4::before { background: var(--accent4); }
+  .step5::before { background: var(--accent5); }
+  .step6::before { background: var(--accent1); }
+  .step7::before { background: var(--accent3); }
+  .step8::before { background: var(--accent2); }
+
+  .pipeline-content {}
+  .pipeline-content .step-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 3px;
+  }
+  .pipeline-content h4 { font-size: 14px; font-weight: 700; color: var(--heading); margin-bottom: 4px; }
+  .pipeline-content p  { font-size: 13px; color: var(--text); }
+
+  /* ── FOOTER ── */
+  .footer {
+    margin-top: 80px;
+    border-top: 1px solid var(--border);
+    padding: 32px 40px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 12.5px;
+    font-family: 'DM Mono', monospace;
+  }
+  .footer strong { color: var(--text); }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════ HERO ═══════════════════════════════ -->
+<div class="hero">
+  <div class="hero-tag">System Architecture Document</div>
+  <h1>Customer Journey <em>Analytics</em> System</h1>
+  <p class="subtitle">A complete architectural breakdown of the dual-application system — covering user tracking, data processing, machine learning, and admin analytics.</p>
+  <div class="hero-meta">
+    <span><strong>Backend</strong> · Node.js</span>
+    <span><strong>Database</strong> · PostgreSQL</span>
+    <span><strong>ML</strong> · XGBoost + NLP</span>
+    <span><strong>Apps</strong> · E-Commerce + Admin Dashboard</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ NAV ═══════════════════════════════ -->
+<nav class="nav-pills">
+  <a href="#s1">01 · Architecture</a>
+  <a href="#s2">02 · User Flow</a>
+  <a href="#s3">03 · Data Processing</a>
+  <a href="#s4">04 · Analytics Engine</a>
+  <a href="#s5">05 · ML Layer</a>
+  <a href="#s6">06 · Admin Dashboard</a>
+  <a href="#s7">07 · Pipeline</a>
+  <a href="#s8">08 · Separation Benefits</a>
+</nav>
+
+<!-- ═══════════════════════════════ CONTENT ═══════════════════════════════ -->
+<div class="wrapper">
+
+  <!-- ── SECTION 1 ── -->
+  <div class="section" id="s1">
+    <div class="section-header">
+      <span class="section-num">01</span>
+      <h2 class="section-title">High-Level Architecture</h2>
+      <div class="section-accent"></div>
+    </div>
+
+    <p style="color:var(--muted);font-size:14px;margin-bottom:20px;">The system is intentionally split into two independent applications that share a common backend and database layer — keeping user experience clean and analytics isolated.</p>
+
+    <div class="arch-diagram">
+      <div class="arch-col">
+        <div class="arch-col-title">🛒 User-Facing Application</div>
+        <div class="arch-box blue"><div class="label">E-Commerce Website</div><div class="sub">React / HTML Frontend</div></div>
+        <div class="arch-box blue"><div class="label">Tracking Script</div><div class="sub">Injected JS — captures events</div></div>
+        <div class="arch-box blue"><div class="label">Pages</div><div class="sub">Product · Cart · Checkout · Payment</div></div>
+        <div class="arch-box blue"><div class="label">User Session</div><div class="sub">Session ID generated per visitor</div></div>
+      </div>
+      <div class="arch-center">
+        <div class="line"></div>
+        <div class="node-shared">🗄 Node.js<br/>REST API</div>
+        <div class="line"></div>
+        <div class="node-shared">🐘 PostgreSQL<br/>Database</div>
+        <div class="line"></div>
+        <div class="node-shared">🤖 ML Engine<br/>XGBoost + NLP</div>
+        <div class="line"></div>
+      </div>
+      <div class="arch-col">
+        <div class="arch-col-title">📊 Admin Analytics Dashboard</div>
+        <div class="arch-box violet"><div class="label">Admin Dashboard</div><div class="sub">React / Next.js Frontend</div></div>
+        <div class="arch-box violet"><div class="label">Heatmap Viewer</div><div class="sub">Click · Scroll · Cursor overlays</div></div>
+        <div class="arch-box violet"><div class="label">Funnel Analysis</div><div class="sub">Product → Cart → Checkout → Pay</div></div>
+        <div class="arch-box violet"><div class="label">ML Insights</div><div class="sub">Drop-off risk · Sentiment scores</div></div>
+      </div>
+    </div>
+
+    <div class="card blue">
+      <div class="card-title"><span class="dot"></span>Key Architectural Principle</div>
+      <p>Both applications are <strong>decoupled at the frontend layer</strong> but share the same Node.js backend and PostgreSQL store. This means the user never experiences analytics overhead, and the admin never interferes with live shopping traffic.</p>
+    </div>
+  </div>
+
+  <!-- ── SECTION 2 ── -->
+  <div class="section" id="s2">
+    <div class="section-header">
+      <span class="section-num">02</span>
+      <h2 class="section-title">User Side Flow</h2>
+      <div class="section-accent"></div>
+    </div>
+
+    <div class="flow-box">
+      <div class="flow-section-label">User Journey</div>
+      <div class="flow-line">
+        <span class="flow-node blue">User Opens Browser</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node">Loads E-Commerce Site</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node">Tracking Script Injected</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node green">Session ID Generated</span>
+      </div>
+      <div class="flow-section-label" style="margin-top:16px;">Behavior Capture</div>
+      <div class="flow-line">
+        <span class="flow-node">Page View</span>
+        <span class="flow-arrow">+</span>
+        <span class="flow-node">Clicks (x,y)</span>
+        <span class="flow-arrow">+</span>
+        <span class="flow-node">Scroll Depth</span>
+        <span class="flow-arrow">+</span>
+        <span class="flow-node">Mouse Move</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node amber">Event Object</span>
+      </div>
+      <div class="flow-section-label" style="margin-top:16px;">Transmission</div>
+      <div class="flow-line">
+        <span class="flow-node amber">Event Object</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node">HTTP POST /api/track</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node green">Node.js Backend</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node green">Stored in PostgreSQL</span>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card green">
+        <div class="card-title"><span class="dot"></span>What the Tracking Script Captures</div>
+        <ul class="clean">
+          <li><strong>Click Events</strong> — x,y pixel coordinates on every click</li>
+          <li><strong>Scroll Depth</strong> — % of page scrolled at each interval</li>
+          <li><strong>Page Views</strong> — timestamp + page URL on each navigation</li>
+          <li><strong>Mouse Movement</strong> — cursor path for hover heatmaps</li>
+          <li><strong>Session ID</strong> — UUID generated once per browser session</li>
+        </ul>
+      </div>
+      <div class="card amber">
+        <div class="card-title"><span class="dot"></span>How Data is Sent</div>
+        <ul class="clean">
+          <li><strong>Transport</strong> — Lightweight HTTP POST requests (non-blocking)</li>
+          <li><strong>Timing</strong> — Events fired asynchronously so page feels fast</li>
+          <li><strong>Batching</strong> — Mouse move events are debounced/throttled</li>
+          <li><strong>Payload</strong> — JSON: <em>{session_id, event_type, x, y, page, timestamp}</em></li>
+          <li><strong>Endpoint</strong> — <em>POST /api/track</em> on the Node.js server</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SECTION 3 ── -->
+  <div class="section" id="s3">
+    <div class="section-header">
+      <span class="section-num">03</span>
+      <h2 class="section-title">Data Processing Layer</h2>
+      <div class="section-accent"></div>
+    </div>
+
+    <div class="card blue">
+      <div class="card-title"><span class="dot"></span>Database Schema — Core Tables</div>
+      <table class="data-table">
+        <thead>
+          <tr><th>Table</th><th>Key Columns</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>raw_events</td><td><code>session_id</code>, <code>event_type</code>, <code>x</code>, <code>y</code>, <code>page</code>, <code>ts</code></td><td>Every raw user event as captured</td></tr>
+          <tr><td>sessions</td><td><code>session_id</code>, <code>start_time</code>, <code>end_time</code>, <code>user_agent</code></td><td>One row per user visit</td></tr>
+          <tr><td>session_features</td><td><code>total_clicks</code>, <code>scroll_depth</code>, <code>duration_sec</code>, <code>pages_visited</code></td><td>Aggregated per-session features for ML</td></tr>
+          <tr><td>feedback</td><td><code>session_id</code>, <code>message</code>, <code>sentiment_score</code></td><td>User feedback + NLP output</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid-2">
+      <div class="card violet">
+        <div class="card-title"><span class="dot"></span>Sessionization Logic</div>
+        <ul class="clean">
+          <li><strong>Session Start</strong> — triggered on first page load, UUID assigned</li>
+          <li><strong>Session End</strong> — detected via inactivity timeout (e.g., 30 min)</li>
+          <li><strong>Grouping</strong> — all events with same <em>session_id</em> are linked</li>
+          <li><strong>Duration</strong> — <em>last_event_ts − first_event_ts</em></li>
+          <li><strong>Page sequence</strong> — ordered list of pages visited in session</li>
+        </ul>
+      </div>
+      <div class="card teal">
+        <div class="card-title"><span class="dot"></span>Feature Engineering</div>
+        <ul class="clean">
+          <li><strong>total_clicks</strong> — COUNT of click events per session</li>
+          <li><strong>avg_scroll_depth</strong> — mean scroll % across all pages</li>
+          <li><strong>session_duration</strong> — seconds from start to last event</li>
+          <li><strong>pages_visited</strong> — distinct page count in session</li>
+          <li><strong>max_funnel_stage</strong> — deepest funnel page reached (0–3)</li>
+          <li><strong>hover_density</strong> — mouse movement event count / page area</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SECTION 4 ── -->
+  <div class="section" id="s4">
+    <div class="section-header">
+      <span class="section-num">04</span>
+      <h2 class="section-title">Analytics Engine</h2>
+      <div class="section-accent"></div>
+    </div>
+
+    <div class="card amber">
+      <div class="card-title"><span class="dot"></span>Funnel Analysis — Product → Cart → Checkout → Payment</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:18px;">Each stage counts unique sessions that reached that page. Drop-off rate is calculated between consecutive stages.</p>
+      <div class="funnel">
+        <div class="funnel-step">
+          <span class="name">Product Page</span>
+          <div class="bar-wrap"><div class="bar" style="width:100%;background:var(--accent1)"></div></div>
+          <span class="pct">100%</span>
+        </div>
+        <div class="funnel-arrow">↓ drop-off</div>
+        <div class="funnel-step">
+          <span class="name">Cart</span>
+          <div class="bar-wrap"><div class="bar" style="width:65%;background:var(--accent2)"></div></div>
+          <span class="pct">~65%</span>
+        </div>
+        <div class="funnel-arrow">↓ drop-off</div>
+        <div class="funnel-step">
+          <span class="name">Checkout</span>
+          <div class="bar-wrap"><div class="bar" style="width:38%;background:var(--accent3)"></div></div>
+          <span class="pct">~38%</span>
+        </div>
+        <div class="funnel-arrow">↓ drop-off</div>
+        <div class="funnel-step">
+          <span class="name">Payment</span>
+          <div class="bar-wrap"><div class="bar" style="width:21%;background:var(--accent4)"></div></div>
+          <span class="pct">~21%</span>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-top:12px;">* Percentages are illustrative. Actual values computed from <code>session_features.max_funnel_stage</code>.</p>
+    </div>
+
+    <div class="grid-2">
+      <div class="card green">
+        <div class="card-title"><span class="dot"></span>Heatmap Generation</div>
+        <ul class="clean">
+          <li><strong>Click Heatmap</strong> — density map of x,y coordinates per page; brighter = more clicks</li>
+          <li><strong>Scroll Heatmap</strong> — colour bands showing how far users scroll; reveals fold</li>
+          <li><strong>Cursor Heatmap</strong> — mouse movement paths; reveals attention zones</li>
+          <li><strong>Rendering</strong> — aggregated coordinate data passed to a canvas or SVG overlay on a page screenshot</li>
+        </ul>
+      </div>
+      <div class="card violet">
+        <div class="card-title"><span class="dot"></span>Scroll & Cursor Insights</div>
+        <ul class="clean">
+          <li><strong>Scroll analysis</strong> — identifies the "drop-off line" where users stop reading</li>
+          <li><strong>Above-fold engagement</strong> — % of users who scroll past 50%, 75%, 100%</li>
+          <li><strong>Cursor dwell time</strong> — zones where cursor pauses longest (high interest)</li>
+          <li><strong>Rage clicks</strong> — repeated rapid clicks on same element (frustration signal)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SECTION 5 ── -->
+  <div class="section" id="s5">
+    <div class="section-header">
+      <span class="section-num">05</span>
+      <h2 class="section-title">Machine Learning Layer</h2>
+      <div class="section-accent"></div>
+    </div>
+
+    <div class="flow-box">
+      <div class="flow-section-label">Drop-Off Prediction Pipeline</div>
+      <div class="flow-line">
+        <span class="flow-node green">session_features table</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node">Feature Vector</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node violet">XGBoost Model</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node amber">Drop-off Probability (0–1)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node pink">Risk Label (High/Med/Low)</span>
+      </div>
+      <div class="flow-section-label" style="margin-top:16px;">Sentiment Analysis Pipeline</div>
+      <div class="flow-line">
+        <span class="flow-node blue">User Feedback Text</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node">Text Preprocessing</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node violet">NLP Model</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node green">Sentiment Score</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node amber">Positive / Neutral / Negative</span>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card violet">
+        <div class="card-title"><span class="dot"></span>Drop-off Prediction — XGBoost</div>
+        <ul class="clean">
+          <li><strong>Input features</strong> — total_clicks, scroll_depth, duration, pages_visited, max_funnel_stage</li>
+          <li><strong>Training data</strong> — historical sessions labelled as "converted" or "dropped"</li>
+          <li><strong>Model output</strong> — probability score (0.0 – 1.0) per session</li>
+          <li><strong>Threshold</strong> — score &gt; 0.65 flagged as high drop-off risk</li>
+          <li><strong>Why XGBoost</strong> — handles tabular data well, fast inference, explainable</li>
+        </ul>
+        <div class="chips">
+          <span class="chip violet">XGBoost</span>
+          <span class="chip blue">Binary Classification</span>
+          <span class="chip green">Feature Importance</span>
+        </div>
+      </div>
+      <div class="card pink">
+        <div class="card-title"><span class="dot"></span>Sentiment Analysis — NLP</div>
+        <ul class="clean">
+          <li><strong>Input</strong> — free-text user feedback submitted on website</li>
+          <li><strong>Preprocessing</strong> — tokenization, stopword removal, lowercasing</li>
+          <li><strong>Model</strong> — pre-trained transformer or VADER/TextBlob for scoring</li>
+          <li><strong>Output</strong> — sentiment label + score; stored in <em>feedback</em> table</li>
+          <li><strong>Aggregation</strong> — daily/weekly positive % shown on dashboard</li>
+        </ul>
+        <div class="chips">
+          <span class="chip pink">NLP</span>
+          <span class="chip violet">Transformer / VADER</span>
+          <span class="chip amber">Sentiment Score</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SECTION 6 ── -->
+  <div class="section" id="s6">
+    <div class="section-header">
+      <span class="section-num">06</span>
+      <h2 class="section-title">Admin Dashboard Flow</h2>
+      <div class="section-accent"></div>
+    </div>
+
+    <div class="card blue">
+      <div class="card-title"><span class="dot"></span>How Admin Accesses the System</div>
+      <ul class="clean">
+        <li><strong>Separate URL</strong> — admin dashboard runs on a distinct domain/port from the e-commerce site</li>
+        <li><strong>Authentication</strong> — login-protected; only authorised users can access</li>
+        <li><strong>Data source</strong> — reads from the same PostgreSQL database via dedicated <em>GET /api/analytics/*</em> endpoints</li>
+        <li><strong>Real-time refresh</strong> — dashboard polls or subscribes to updates at regular intervals</li>
+      </ul>
+    </div>
+
+    <p style="color:var(--muted);font-size:14px;margin:16px 0 12px;">The dashboard is organized into five major insight panels:</p>
+
+    <div class="grid-2">
+      <div class="card amber">
+        <div class="card-title"><span class="dot"></span>① Funnel Drop-off Panel</div>
+        <ul class="clean">
+          <li>Visual funnel chart showing conversion at each stage</li>
+          <li>Percentage drop between Product → Cart → Checkout → Payment</li>
+          <li>Session counts per stage; filterable by date range</li>
+          <li>Highlights the weakest conversion point</li>
+        </ul>
+      </div>
+      <div class="card green">
+        <div class="card-title"><span class="dot"></span>② Heatmap Viewer</div>
+        <ul class="clean">
+          <li>Toggle between Click, Scroll, and Cursor heatmaps</li>
+          <li>Overlaid on a screenshot of the actual page</li>
+          <li>Filter by page (Product, Cart, Checkout, Payment)</li>
+          <li>Colour scale: cold (blue) = low activity → hot (red) = high</li>
+        </ul>
+      </div>
+      <div class="card violet">
+        <div class="card-title"><span class="dot"></span>③ Session Analytics Panel</div>
+        <ul class="clean">
+          <li>Average session duration, total sessions, bounce rate</li>
+          <li>Average clicks per session and scroll depth</li>
+          <li>Top pages by visit count and dwell time</li>
+          <li>Time-series charts showing traffic trends</li>
+        </ul>
+      </div>
+      <div class="card pink">
+        <div class="card-title"><span class="dot"></span>④ Risk Prediction Panel</div>
+        <ul class="clean">
+          <li>Distribution of High / Medium / Low risk sessions</li>
+          <li>Table of most recent high-risk sessions with feature values</li>
+          <li>Feature importance chart (which signals drive drop-off)</li>
+          <li>Model confidence score displayed per prediction</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card teal" style="margin-top:0">
+      <div class="card-title"><span class="dot"></span>⑤ Sentiment Insights Panel</div>
+      <ul class="clean">
+        <li><strong>Sentiment breakdown</strong> — % Positive, Neutral, Negative over time</li>
+        <li><strong>Trending keywords</strong> — most common words in negative feedback</li>
+        <li><strong>Feedback feed</strong> — live list of recent comments with colour-coded sentiment tags</li>
+        <li><strong>Correlation view</strong> — cross-reference sentiment with funnel stage where feedback was submitted</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ── SECTION 7 ── -->
+  <div class="section" id="s7">
+    <div class="section-header">
+      <span class="section-num">07</span>
+      <h2 class="section-title">End-to-End Data Flow Pipeline</h2>
+      <div class="section-accent"></div>
+    </div>
+
+    <div class="pipeline">
+      <div class="pipeline-step step1">
+        <div class="pipeline-content">
+          <div class="step-label">Stage 1 · User Interaction</div>
+          <h4>User Browses the E-Commerce Website</h4>
+          <p>User opens the site. A unique <strong>Session ID</strong> (UUID) is generated in their browser. As they navigate pages (Product → Cart → Checkout → Payment), the injected tracking script silently listens for events.</p>
+        </div>
+      </div>
+      <div class="pipeline-step step2">
+        <div class="pipeline-content">
+          <div class="step-label">Stage 2 · Event Capture</div>
+          <h4>Tracking Script Fires Events</h4>
+          <p>Every click, scroll, page view, and mouse movement is captured with its coordinates, timestamp, page name, and session ID, then serialized into a JSON event object.</p>
+        </div>
+      </div>
+      <div class="pipeline-step step3">
+        <div class="pipeline-content">
+          <div class="step-label">Stage 3 · Transmission</div>
+          <h4>HTTP POST → Node.js Backend</h4>
+          <p>Events are sent asynchronously to <code>POST /api/track</code>. The backend validates and writes each event to the <strong>raw_events</strong> table in PostgreSQL in real time.</p>
+        </div>
+      </div>
+      <div class="pipeline-step step4">
+        <div class="pipeline-content">
+          <div class="step-label">Stage 4 · Sessionization</div>
+          <h4>Session Aggregation Job</h4>
+          <p>A scheduled backend job (or trigger) groups raw events by session ID, calculates duration, pages visited, total clicks, max scroll depth, and funnel stage reached — writing results to <strong>session_features</strong>.</p>
+        </div>
+      </div>
+      <div class="pipeline-step step5">
+        <div class="pipeline-content">
+          <div class="step-label">Stage 5 · Analytics Computation</div>
+          <h4>Funnel, Heatmap & Scroll Analysis</h4>
+          <p>The analytics engine queries session data to compute funnel conversion rates, aggregates click/cursor coordinates into heatmap matrices, and calculates scroll distribution curves per page.</p>
+        </div>
+      </div>
+      <div class="pipeline-step step6">
+        <div class="pipeline-content">
+          <div class="step-label">Stage 6 · Machine Learning Inference</div>
+          <h4>XGBoost Prediction + NLP Scoring</h4>
+          <p>Session feature vectors are passed to the XGBoost model to generate drop-off probability scores. In parallel, user feedback text is processed by the NLP model to output sentiment labels and scores.</p>
+        </div>
+      </div>
+      <div class="pipeline-step step7">
+        <div class="pipeline-content">
+          <div class="step-label">Stage 7 · Result Storage</div>
+          <h4>Predictions Written Back to Database</h4>
+          <p>ML outputs (risk scores, sentiment labels) are stored back into PostgreSQL alongside their source sessions, making them available for dashboard queries.</p>
+        </div>
+      </div>
+      <div class="pipeline-step step8">
+        <div class="pipeline-content">
+          <div class="step-label">Stage 8 · Admin Consumption</div>
+          <h4>Admin Dashboard Reads & Visualises</h4>
+          <p>The admin logs into the analytics dashboard. The frontend calls <code>GET /api/analytics/*</code> endpoints which return pre-computed analytics, heatmaps, funnel data, risk flags, and sentiment summaries — displayed as interactive charts and tables.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-box" style="margin-top:8px;">
+      <div class="flow-section-label">Simplified One-Line Pipeline</div>
+      <div class="flow-line" style="flex-wrap:wrap;gap:4px;">
+        <span class="flow-node blue">User</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node">Tracking Script</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node green">Node.js API</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node green">PostgreSQL</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node amber">Sessionization</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node violet">Analytics Engine</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node pink">ML Models</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node green">DB Results</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node blue">Admin Dashboard</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SECTION 8 ── -->
+  <div class="section" id="s8">
+    <div class="section-header">
+      <span class="section-num">08</span>
+      <h2 class="section-title">Benefits of Separation</h2>
+      <div class="section-accent"></div>
+    </div>
+
+    <p style="color:var(--muted);font-size:14px;margin-bottom:20px;">Keeping the user-facing e-commerce app and the admin analytics dashboard as two separate applications is a deliberate architectural decision with significant practical advantages.</p>
+
+    <div class="grid-3">
+      <div class="benefit-card">
+        <div class="icon">⚡</div>
+        <h4>Performance Isolation</h4>
+        <p>Analytics queries (heavy aggregations, ML inference) run independently and never slow down the shopping experience for real users.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="icon">🔐</div>
+        <h4>Security Boundary</h4>
+        <p>Admin dashboard is on a protected route with authentication. Users can never accidentally — or maliciously — access analytics data.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="icon">📐</div>
+        <h4>Clean Separation of Concerns</h4>
+        <p>Developers working on the shopping UI don't need to know anything about ML pipelines. Analytics engineers don't need to touch product pages.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="icon">📈</div>
+        <h4>Independent Scalability</h4>
+        <p>If traffic spikes, only the user app needs to scale out. The analytics system can scale separately based on data volume and query load.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="icon">🔄</div>
+        <h4>Independent Deployment</h4>
+        <p>The admin dashboard can be updated, redeployed, or taken offline for maintenance without affecting live shoppers at all.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="icon">🧪</div>
+        <h4>Easier Testing & Debugging</h4>
+        <p>Each app has a clear responsibility. Bugs in the analytics layer don't affect the shopping experience, and vice versa — simplifying root-cause analysis.</p>
+      </div>
+    </div>
+
+    <div class="card blue" style="margin-top:20px;">
+      <div class="card-title"><span class="dot"></span>Business & Research Perspective</div>
+      <ul class="clean">
+        <li><strong>User Trust</strong> — users interact with a clean, fast shopping site; tracking is invisible and non-intrusive</li>
+        <li><strong>Data Governance</strong> — analytics data access is centralised and auditable through a single admin layer</li>
+        <li><strong>Iterative ML</strong> — ML models can be retrained and updated without any changes to the user-facing product</li>
+        <li><strong>Academic Clarity</strong> — in research context, the two-system design cleanly separates the <em>data collection domain</em> from the <em>data analysis domain</em></li>
+        <li><strong>Commercial Realism</strong> — mirrors real-world systems like Google Analytics, Mixpanel, and Hotjar, which are always separate from the products they analyse</li>
+      </ul>
+    </div>
+  </div>
+
+</div><!-- /wrapper -->
+
+<!-- ══ FOOTER ══ -->
+<div class="footer">
+  <strong>Customer Journey Analytics System</strong> · System Architecture Document<br/>
+  Node.js · PostgreSQL · XGBoost · NLP · React
+</div>
+
+</body>
+</html>

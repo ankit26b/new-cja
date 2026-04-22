@@ -11,6 +11,8 @@ import Payment from "./pages/Payment";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import SetupAdmin from "./pages/SetupAdmin";
+import UserManagement from "./pages/UserManagement";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -29,6 +31,7 @@ function App() {
         {/* Auth Routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/setup-admin" element={<SetupAdmin />} />
 
         {/* Admin Protected Routes */}
         <Route path="/dashboard" element={
@@ -44,6 +47,11 @@ function App() {
         <Route path="/scroll-heatmap" element={
           <ProtectedRoute adminOnly>
             <ScrollHeatmap />
+          </ProtectedRoute>
+        } />
+        <Route path="/users" element={
+          <ProtectedRoute adminOnly>
+            <UserManagement />
           </ProtectedRoute>
         } />
       </Routes>

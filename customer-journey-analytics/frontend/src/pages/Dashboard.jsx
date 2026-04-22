@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
 import { useAuth } from "../context/AuthContext";
 
@@ -40,6 +41,17 @@ export default function Dashboard() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <h2>Welcome, {user?.email} ({user?.role})</h2>
           <button onClick={logout}>Logout</button>
+        </div>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 24 }}>
+          <Link to="/heatmap" style={{ color: "#667eea", textDecoration: "none", fontWeight: 600 }}>
+            View Heatmap
+          </Link>
+          <Link to="/scroll-heatmap" style={{ color: "#667eea", textDecoration: "none", fontWeight: 600 }}>
+            View Scroll Heatmap
+          </Link>
+          <Link to="/users" style={{ color: "#667eea", textDecoration: "none", fontWeight: 600 }}>
+            Manage Users
+          </Link>
         </div>
         <h1>Funnel Analysis</h1>
 

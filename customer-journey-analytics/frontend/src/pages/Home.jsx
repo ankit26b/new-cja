@@ -1,19 +1,47 @@
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import "./Home.css";
 
 export default function Home() {
   const navigate = useNavigate();
+  const { user, logout, isAdmin } = useAuth();
 
   return (
     <div className="homeContainer">
       {/* Hero Section */}
       <section className="hero">
         <div className="heroBackground"></div>
+        <div className="heroTopBar">
+          <div className="heroAuthStatus">
+            {user ? `Signed in as ${user.email}` : 'Browse the store or sign in'}
+          </div>
+          <div className="heroAuthActions">
+            {user ? (
+              <>
+                {isAdmin() && (
+                  <button className="secondaryBtn" onClick={() => navigate('/dashboard')}>
+                    View Analytics
+                  </button>
+                )}
+                <button className="secondaryBtn" onClick={logout}>Logout</button>
+              </>
+            ) : (
+              <>
+                <button className="secondaryBtn" onClick={() => navigate('/login')}>Login</button>
+                <button className="secondaryBtn" onClick={() => navigate('/register')}>Register</button>
+              </>
+            )}
+          </div>
+        </div>
         <h1 className="glowText">Aesthetic Store</h1>
         <p>Experience the next generation of online shopping. Premium products, unmatched quality, and a design that feels alive.</p>
         <div className="ctaGroup">
           <button className="primary" onClick={() => navigate('/product')}>Explore Products</button>
-          <button className="secondaryBtn" onClick={() => navigate('/dashboard')}>View Analytics</button>
+          {isAdmin() ? (
+            <button className="secondaryBtn" onClick={() => navigate('/dashboard')}>View Analytics</button>
+          ) : (
+            <button className="secondaryBtn" onClick={() => navigate('/login')}>Admin Login</button>
+          )}
         </div>
       </section>
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './Login.css';
 
@@ -11,6 +11,9 @@ function Login() {
     
     const { login } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
+
+    const successMessage = location.state?.message || '';
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -33,6 +36,7 @@ function Login() {
             <div className="login-box">
                 <h2>Admin Login</h2>
                 
+                {successMessage && <div className="success-message">{successMessage}</div>}
                 {error && <div className="error-message">{error}</div>}
                 
                 <form onSubmit={handleSubmit}>
