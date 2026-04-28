@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import simpleheat from "simpleheat";
 import { useAuth } from "../context/AuthContext";
 
@@ -40,7 +41,10 @@ export default function Heatmap() {
 
   return (
     <div style={{ padding: 20 }}>
-      <h1>Heatmap Viewer</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <h1 style={{ margin: 0 }}>Heatmap Viewer</h1>
+        <Link to="/dashboard" style={{ color: '#667eea', textDecoration: 'none', fontWeight: 600 }}>← Back to Dashboard</Link>
+      </div>
 
       <select onChange={(e) => setPage(e.target.value)}>
         <option value="/product">Product</option>

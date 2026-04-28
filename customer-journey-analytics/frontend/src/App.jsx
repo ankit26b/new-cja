@@ -13,6 +13,9 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import SetupAdmin from "./pages/SetupAdmin";
 import UserManagement from "./pages/UserManagement";
+import TimeOnPage from "./pages/TimeOnPage";
+import EntryExit from "./pages/EntryExit";
+import RageClicks from "./pages/RageClicks";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -52,6 +55,21 @@ function App() {
         <Route path="/users" element={
           <ProtectedRoute adminOnly>
             <UserManagement />
+          </ProtectedRoute>
+        } />
+        <Route path="/time-on-page" element={
+          <ProtectedRoute adminOnly>
+            <TimeOnPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/entry-exit" element={
+          <ProtectedRoute adminOnly>
+            <EntryExit />
+          </ProtectedRoute>
+        } />
+        <Route path="/rage-clicks" element={
+          <ProtectedRoute adminOnly>
+            <RageClicks />
           </ProtectedRoute>
         } />
       </Routes>

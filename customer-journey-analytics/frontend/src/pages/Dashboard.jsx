@@ -22,17 +22,37 @@ export default function Dashboard() {
   }, [token]);
 
   const [risk, setRisk] = useState(null);
+  const [riskError, setRiskError] = useState('');
 
   function checkRisk() {
     const sessionId = sessionStorage.getItem("cja_session_id");
+    setRiskError('');
 
     fetch(`http://localhost:5000/api/predict/${sessionId}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     })
-      .then(res => res.json())
-      .then(data => setRisk(data));
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`Server error: ${res.status}`);
+        }
+        return res.json();
+      })
+      .then(data => {
+        if (data.error) {
+          throw new Error(data.error);
+        }
+        if (data.drop_off_probability === undefined) {
+          throw new Error('Invalid response format');
+        }
+        setRisk(data);
+        setRiskError('');
+      })
+      .catch(err => {
+        setRiskError(err.message || 'Failed to check risk');
+        setRisk(null);
+      });
   }
 
   return (
@@ -52,6 +72,15 @@ export default function Dashboard() {
           <Link to="/users" style={{ color: "#667eea", textDecoration: "none", fontWeight: 600 }}>
             Manage Users
           </Link>
+          <Link to="/time-on-page" style={{ color: "#667eea", textDecoration: "none", fontWeight: 600 }}>
+            Time on Page
+          </Link>
+          <Link to="/entry-exit" style={{ color: "#667eea", textDecoration: "none", fontWeight: 600 }}>
+            Entry & Exit Pages
+          </Link>
+          <Link to="/rage-clicks" style={{ color: "#667eea", textDecoration: "none", fontWeight: 600 }}>
+            Rage Clicks
+          </Link>
         </div>
         <h1>Funnel Analysis</h1>
 
@@ -66,6 +95,14 @@ export default function Dashboard() {
       <button onClick={checkRisk} style={{ marginTop: 20 }}>
         Check My Drop-Off Risk
       </button>
+
+      {riskError && (
+        <div style={{ marginTop: 20, padding: 20, background: '#ffe6e6', borderRadius: '8px', color: '#d63031' }}>
+          <h3>Error</h3>
+          <p>{riskError}</p>
+          <p style={{ fontSize: '14px', color: '#999' }}>Make sure the ML server is running at http://localhost:8000</p>
+        </div>
+      )}
 
       {risk && (
         <div style={{ marginTop: 20, padding: 20, border: "1px solid #ccc" }}>
