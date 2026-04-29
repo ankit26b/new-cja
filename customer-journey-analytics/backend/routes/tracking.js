@@ -17,27 +17,25 @@ router.post('/track', async (req, res) => {
             return res.status(400).json({ error: "Missing required fields" });
         }
 
-        // 1️⃣ Check if session exists
-        const sessionCheck = await pool.query(
-            `SELECT * FROM sessions WHERE session_id = $1`,
+        // Sanitize numeric fields — browser can send floats for integer columns
+        const safeX = x != null ? Math.round(x) : null;
+        const safeY = y != null ? Math.round(y) : null;
+        const safeScrollDepth = scroll_depth != null ? Math.round(scroll_depth) : 0;
+
+        // Upsert session — safe against race conditions from simultaneous events
+        await pool.query(
+            `INSERT INTO sessions (session_id, start_time)
+             VALUES ($1, NOW())
+             ON CONFLICT (session_id) DO NOTHING`,
             [session_id]
         );
-
-        // 2️⃣ If session does not exist → create it
-        if (sessionCheck.rows.length === 0) {
-            await pool.query(
-                `INSERT INTO sessions (session_id, start_time)
-                 VALUES ($1, NOW())`,
-                [session_id]
-            );
-        }
 
         // 3️⃣ Insert event
         await pool.query(
             `INSERT INTO events 
             (session_id, event_type, x, y, page_url, scroll_depth)
             VALUES ($1, $2, $3, $4, $5, $6)`,
-            [session_id, event_type, x, y, page_url, scroll_depth]
+            [session_id, event_type, safeX, safeY, page_url, safeScrollDepth]
         );
 
         // 4️⃣ Update click count only if click event
@@ -56,7 +54,7 @@ router.post('/track', async (req, res) => {
                 `UPDATE sessions
                  SET max_scroll_depth = GREATEST(max_scroll_depth, $1)
                  WHERE session_id = $2`,
-                [scroll_depth || 0, session_id]
+                [safeScrollDepth, session_id]
             );
         }
 
@@ -89,8 +87,8 @@ router.post('/track', async (req, res) => {
         res.status(200).json({ message: "Event stored successfully" });
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Error storing event" });
+        console.error('TRACK ERROR:', error.message, '| Body:', JSON.stringify(req.body));
+        res.status(500).json({ error: "Error storing event", detail: error.message });
     }
 });
 

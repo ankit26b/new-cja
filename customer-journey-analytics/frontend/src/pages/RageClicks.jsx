@@ -120,13 +120,24 @@ function RageClicks() {
             <div style={styles.controlsRow}>
                 <div style={styles.selectWrapper}>
                     <label style={styles.label}>Page:</label>
-                    <select
-                        value={selectedPage}
-                        onChange={e => setSelectedPage(e.target.value)}
-                        style={styles.select}
-                    >
-                        {PAGES.map(p => <option key={p} value={p}>{p}</option>)}
-                    </select>
+                    <div style={styles.customSelectWrapper}>
+                        <select
+                            value={selectedPage}
+                            onChange={e => setSelectedPage(e.target.value)}
+                            style={styles.select}
+                            onMouseOver={(e) => e.target.style.borderColor = '#cbd5e1'}
+                            onMouseOut={(e) => e.target.style.borderColor = '#e2e8f0'}
+                            onFocus={(e) => { e.target.style.borderColor = '#667eea'; e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.2)'; }}
+                            onBlur={(e) => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)'; }}
+                        >
+                            {PAGES.map(p => <option key={p} value={p}>{p}</option>)}
+                        </select>
+                        <div style={styles.selectIcon}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                    </div>
                 </div>
                 <div style={styles.badge}>
                     {loading ? '…' : zones.length} zone{zones.length !== 1 ? 's' : ''} detected
@@ -219,11 +230,28 @@ const styles = {
         display: 'flex', alignItems: 'center', gap: 16,
         flexWrap: 'wrap', marginBottom: 20,
     },
-    selectWrapper: { display: 'flex', alignItems: 'center', gap: 8 },
+    selectWrapper: { display: 'flex', alignItems: 'center', gap: 12 },
     label: { fontWeight: 600, fontSize: 14, color: '#444' },
+    customSelectWrapper: { position: 'relative', display: 'inline-block', minWidth: '180px' },
     select: {
-        padding: '8px 12px', borderRadius: 8, border: '1px solid #ddd',
-        fontSize: 14, cursor: 'pointer', background: '#fff',
+        width: '100%',
+        padding: '10px 36px 10px 14px',
+        fontSize: '14px',
+        fontWeight: '600',
+        color: '#1e293b',
+        backgroundColor: '#ffffff',
+        border: '2px solid #e2e8f0',
+        borderRadius: '8px',
+        appearance: 'none',
+        outline: 'none',
+        cursor: 'pointer',
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+        transition: 'all 0.3s ease',
+        fontFamily: 'inherit'
+    },
+    selectIcon: {
+        position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
+        pointerEvents: 'none', color: '#64748b', display: 'flex', alignItems: 'center'
     },
     badge: {
         padding: '6px 14px', borderRadius: 20,
