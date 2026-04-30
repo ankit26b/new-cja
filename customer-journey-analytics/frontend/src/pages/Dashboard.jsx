@@ -81,6 +81,15 @@ export default function Dashboard() {
           <Link to="/rage-clicks" style={{ color: "#667eea", textDecoration: "none", fontWeight: 600 }}>
             Rage Clicks
           </Link>
+          <Link to="/nav-paths" style={{ color: "#667eea", textDecoration: "none", fontWeight: 600 }}>
+            Navigation Paths
+          </Link>
+          <Link to="/conversion-influence" style={{ color: "#667eea", textDecoration: "none", fontWeight: 600 }}>
+            Conversion Influencer
+          </Link>
+          <Link to="/engagement-scores" style={{ color: "#667eea", textDecoration: "none", fontWeight: 600 }}>
+            Engagement Scores
+          </Link>
         </div>
         <h1>Funnel Analysis</h1>
 

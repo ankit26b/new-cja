@@ -49,6 +49,22 @@ async function createTables() {
     `);
 
     console.log('✅ events table created');
+
+    // Create session_features table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS session_features (
+        id SERIAL PRIMARY KEY,
+        session_id VARCHAR(255) UNIQUE NOT NULL,
+        total_clicks INTEGER DEFAULT 0,
+        avg_scroll_depth DECIMAL DEFAULT 0,
+        session_duration DECIMAL DEFAULT 0,
+        pages_visited INTEGER DEFAULT 0,
+        max_funnel_stage INTEGER DEFAULT 0,
+        FOREIGN KEY (session_id) REFERENCES sessions(session_id) ON DELETE CASCADE
+      )
+    `);
+
+    console.log('✅ session_features table created');
     console.log('Database setup complete!');
 
     // Optional admin seed from environment variables

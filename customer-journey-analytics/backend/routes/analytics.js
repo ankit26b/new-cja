@@ -108,6 +108,31 @@ router.get('/predict/:session_id', authMiddleware, adminMiddleware, async (req, 
 
         const session = result.rows[0];
 
+        // Fetch normalization maxima and session scroll depth for engagement score
+        const maxResult = await pool.query(
+            `SELECT
+               COALESCE(MAX(session_duration), 1) AS max_duration,
+               COALESCE(MAX(total_clicks), 1) AS max_clicks
+             FROM session_features`
+        );
+        const sfResult = await pool.query(
+            `SELECT avg_scroll_depth, session_duration, total_clicks
+             FROM session_features WHERE session_id = $1`,
+            [session_id]
+        );
+
+        let engagement_score = 0;
+        if (maxResult.rows.length > 0 && sfResult.rows.length > 0) {
+            const sf = sfResult.rows[0];
+            const maxDur = Number(maxResult.rows[0].max_duration) || 1;
+            const maxClk = Number(maxResult.rows[0].max_clicks) || 1;
+            const normDuration = (Number(sf.session_duration) / maxDur) * 100;
+            const normClicks  = (Number(sf.total_clicks)      / maxClk) * 100;
+            engagement_score = Number(
+                (Number(sf.avg_scroll_depth) * 0.40 + normDuration * 0.35 + normClicks * 0.25).toFixed(2)
+            );
+        }
+
         const mlResponse = await fetch("http://localhost:8000/predict", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -115,7 +140,8 @@ router.get('/predict/:session_id', authMiddleware, adminMiddleware, async (req, 
                 duration: parseFloat(session.duration) || 0,
                 total_clicks: parseInt(session.total_clicks) || 0,
                 max_scroll_depth: parseInt(session.max_scroll_depth) || 0,
-                total_pages: parseInt(session.total_pages) || 0
+                total_pages: parseInt(session.total_pages) || 0,
+                engagement_score
             })
         });
 
@@ -397,6 +423,282 @@ router.get('/analytics/rage-clicks', authMiddleware, adminMiddleware, async (req
     } catch (error) {
         console.error('Rage click error:', error);
         res.status(500).json({ error: 'Failed to compute rage clicks' });
+    }
+});
+
+// Customer-facing pages only (exclude admin/analytics pages)
+const CUSTOMER_PAGES = ['/', '/product', '/cart', '/checkout', '/payment'];
+
+// Navigation Paths
+router.get('/nav-paths', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit, 10) || 10;
+
+        const result = await pool.query(`
+            SELECT session_id, page_url, timestamp
+            FROM events
+            WHERE event_type = 'page_view'
+              AND page_url = ANY($1)
+            ORDER BY session_id, timestamp
+        `, [CUSTOMER_PAGES]);
+
+        // Group pages by session in visit order
+        const sessions = {};
+        result.rows.forEach(row => {
+            if (!sessions[row.session_id]) {
+                sessions[row.session_id] = [];
+            }
+            sessions[row.session_id].push(row.page_url);
+        });
+
+        // Build path strings and count occurrences
+        const pathCounts = {};
+        let totalSessions = 0;
+        let convertedSessions = 0;
+
+        Object.values(sessions).forEach(pages => {
+            totalSessions++;
+            const pathStr = pages.join(' → ');
+            pathCounts[pathStr] = (pathCounts[pathStr] || 0) + 1;
+
+            if (pages.includes('/payment')) {
+                convertedSessions++;
+            }
+        });
+
+        // Sort by session_count descending and take top N
+        const paths = Object.entries(pathCounts)
+            .map(([path, session_count]) => ({
+                path,
+                session_count,
+                converted: path.includes('/payment')
+            }))
+            .sort((a, b) => b.session_count - a.session_count)
+            .slice(0, limit);
+
+        const totalUniquePaths = Object.keys(pathCounts).length;
+        const mostCommonPath = paths.length > 0 ? paths[0].path : null;
+        const conversionRate = totalSessions > 0
+            ? parseFloat(((convertedSessions / totalSessions) * 100).toFixed(2))
+            : 0;
+
+        res.json({
+            paths,
+            summary: {
+                total_unique_paths: totalUniquePaths,
+                most_common_path: mostCommonPath,
+                conversion_rate: conversionRate
+            }
+        });
+
+    } catch (error) {
+        console.error('Nav paths error:', error);
+        res.status(500).json({ error: 'Failed to compute navigation paths' });
+    }
+});
+
+// Conversion Influence
+router.get('/conversion-influence', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        // Fetch sessions with their conversion status
+        const result = await pool.query(`
+            SELECT
+                s.session_id,
+                COALESCE(s.total_clicks, 0)       AS total_clicks,
+                COALESCE(s.max_scroll_depth, 0)    AS avg_scroll_depth,
+                COALESCE(s.duration, 0)            AS session_duration,
+                COALESCE(s.total_pages, 0)         AS pages_visited,
+                CASE
+                    WHEN EXISTS (
+                        SELECT 1 FROM events e
+                        WHERE e.session_id = s.session_id
+                          AND e.page_url = '/payment'
+                          AND e.event_type = 'page_view'
+                    ) THEN true
+                    ELSE false
+                END AS converted
+            FROM sessions s
+            WHERE s.duration IS NOT NULL
+        `);
+
+        const metrics = ['total_clicks', 'avg_scroll_depth', 'session_duration', 'pages_visited'];
+
+        const groups = { converted: [], dropped: [] };
+        result.rows.forEach(row => {
+            const bucket = row.converted ? 'converted' : 'dropped';
+            groups[bucket].push({
+                total_clicks:     parseFloat(row.total_clicks),
+                avg_scroll_depth: parseFloat(row.avg_scroll_depth),
+                session_duration: parseFloat(row.session_duration),
+                pages_visited:    parseFloat(row.pages_visited),
+            });
+        });
+
+        function avg(arr, key) {
+            if (arr.length === 0) return 0;
+            return arr.reduce((s, r) => s + r[key], 0) / arr.length;
+        }
+
+        function median(arr, key) {
+            if (arr.length === 0) return 0;
+            const sorted = arr.map(r => r[key]).sort((a, b) => a - b);
+            const mid = Math.floor(sorted.length / 2);
+            return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+        }
+
+        function buildStats(arr) {
+            return {
+                count:        arr.length,
+                avg_clicks:   parseFloat(avg(arr, 'total_clicks').toFixed(2)),
+                avg_scroll:   parseFloat(avg(arr, 'avg_scroll_depth').toFixed(2)),
+                avg_duration: parseFloat(avg(arr, 'session_duration').toFixed(2)),
+                avg_pages:    parseFloat(avg(arr, 'pages_visited').toFixed(2)),
+                median_clicks:   parseFloat(median(arr, 'total_clicks').toFixed(2)),
+                median_scroll:   parseFloat(median(arr, 'avg_scroll_depth').toFixed(2)),
+                median_duration: parseFloat(median(arr, 'session_duration').toFixed(2)),
+                median_pages:    parseFloat(median(arr, 'pages_visited').toFixed(2)),
+            };
+        }
+
+        const converted = buildStats(groups.converted);
+        const dropped   = buildStats(groups.dropped);
+
+        // Generate insights where converted avg is >50% higher than dropped avg
+        const metricLabels = {
+            total_clicks:     { avgKey: 'avg_clicks',   verb: 'clicked' },
+            avg_scroll_depth: { avgKey: 'avg_scroll',   verb: 'scrolled' },
+            session_duration: { avgKey: 'avg_duration', verb: 'spent time' },
+            pages_visited:    { avgKey: 'avg_pages',    verb: 'visited pages' },
+        };
+
+        const insights = [];
+        for (const metric of metrics) {
+            const { avgKey, verb } = metricLabels[metric];
+            const cVal = converted[avgKey];
+            const dVal = dropped[avgKey];
+            if (dVal > 0 && cVal > dVal * 1.5) {
+                const ratio = (cVal / dVal).toFixed(1);
+                insights.push(`Converted users ${verb} ${ratio}x more than users who dropped off`);
+            } else if (cVal > 0 && dVal === 0) {
+                insights.push(`Converted users ${verb} significantly more (dropped-off users had none)`);
+            }
+        }
+
+        res.json({ converted, dropped, insights });
+
+    } catch (error) {
+        console.error('Conversion influence error:', error);
+        res.status(500).json({ error: 'Failed to compute conversion influence' });
+    }
+});
+
+// Engagement Scores
+router.get('/engagement-scores', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT session_id, avg_scroll_depth, session_duration, total_clicks, max_funnel_stage
+             FROM session_features`
+        );
+
+        const sessions = result.rows;
+
+        if (sessions.length === 0) {
+            return res.json({
+                distribution: {
+                    highly_engaged: { count: 0, percentage: 0 },
+                    moderately_engaged: { count: 0, percentage: 0 },
+                    passive: { count: 0, percentage: 0 }
+                },
+                average_score: 0,
+                scores_by_funnel_stage: {},
+                top_sessions: []
+            });
+        }
+
+        const maxDuration = Math.max(...sessions.map(s => Number(s.session_duration)));
+        const maxClicks = Math.max(...sessions.map(s => Number(s.total_clicks)));
+
+        const scored = sessions.map(s => {
+            const avgScroll = Number(s.avg_scroll_depth);
+            const duration = Number(s.session_duration);
+            const clicks = Number(s.total_clicks);
+
+            const normalizedDuration = maxDuration > 0 ? (duration / maxDuration) * 100 : 0;
+            const normalizedClicks = maxClicks > 0 ? (clicks / maxClicks) * 100 : 0;
+
+            const score = Number(
+                (avgScroll * 0.40 + normalizedDuration * 0.35 + normalizedClicks * 0.25).toFixed(2)
+            );
+
+            let category;
+            if (score >= 70) category = 'highly_engaged';
+            else if (score >= 40) category = 'moderately_engaged';
+            else category = 'passive';
+
+            return {
+                session_id: s.session_id,
+                score,
+                category,
+                avg_scroll_depth: avgScroll,
+                session_duration: duration,
+                total_clicks: clicks,
+                max_funnel_stage: s.max_funnel_stage
+            };
+        });
+
+        // Distribution
+        const distribution = {
+            highly_engaged: { count: 0, percentage: 0 },
+            moderately_engaged: { count: 0, percentage: 0 },
+            passive: { count: 0, percentage: 0 }
+        };
+
+        scored.forEach(s => {
+            distribution[s.category].count++;
+        });
+
+        const total = scored.length;
+        for (const key of Object.keys(distribution)) {
+            distribution[key].percentage = Number(
+                ((distribution[key].count / total) * 100).toFixed(2)
+            );
+        }
+
+        // Average score
+        const average_score = Number(
+            (scored.reduce((sum, s) => sum + s.score, 0) / total).toFixed(2)
+        );
+
+        // Scores by funnel stage
+        const stageGroups = {};
+        scored.forEach(s => {
+            const stage = s.max_funnel_stage;
+            if (!stageGroups[stage]) stageGroups[stage] = [];
+            stageGroups[stage].push(s.score);
+        });
+
+        const scores_by_funnel_stage = {};
+        for (const [stage, scores] of Object.entries(stageGroups)) {
+            scores_by_funnel_stage[stage] = Number(
+                (scores.reduce((sum, sc) => sum + sc, 0) / scores.length).toFixed(2)
+            );
+        }
+
+        // Top 20 sessions by score
+        const top_sessions = scored
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 20);
+
+        res.json({
+            distribution,
+            average_score,
+            scores_by_funnel_stage,
+            top_sessions
+        });
+
+    } catch (error) {
+        console.error('Engagement scores error:', error);
+        res.status(500).json({ error: 'Failed to compute engagement scores' });
     }
 });
 

@@ -16,6 +16,9 @@ import UserManagement from "./pages/UserManagement";
 import TimeOnPage from "./pages/TimeOnPage";
 import EntryExit from "./pages/EntryExit";
 import RageClicks from "./pages/RageClicks";
+import NavPaths from "./pages/NavPaths";
+import ConversionInfluencer from "./pages/ConversionInfluencer";
+import EngagementScores from "./pages/EngagementScores";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -70,6 +73,21 @@ function App() {
         <Route path="/rage-clicks" element={
           <ProtectedRoute adminOnly>
             <RageClicks />
+          </ProtectedRoute>
+        } />
+        <Route path="/nav-paths" element={
+          <ProtectedRoute adminOnly>
+            <NavPaths />
+          </ProtectedRoute>
+        } />
+        <Route path="/conversion-influence" element={
+          <ProtectedRoute adminOnly>
+            <ConversionInfluencer />
+          </ProtectedRoute>
+        } />
+        <Route path="/engagement-scores" element={
+          <ProtectedRoute adminOnly>
+            <EngagementScores />
           </ProtectedRoute>
         } />
       </Routes>
