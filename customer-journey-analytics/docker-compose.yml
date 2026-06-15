@@ -1,0 +1,86 @@
+services:
+  # ───── PostgreSQL Database ─────
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-cja}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-cja}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ───── Node.js Backend API ─────
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      PORT: 5000
+      DB_USER: ${DB_USER:-postgres}
+      DB_HOST: db
+      DB_NAME: ${DB_NAME:-cja}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_PORT: 5432
+      JWT_SECRET: ${JWT_SECRET:-cja_secret_key}
+      ML_SERVICE_URL: http://ml-models:8000
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin123!}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ───── React Frontend (Vite Dev Server) ─────
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+  # ───── ML Models (FastAPI) ─────
+  ml-models:
+    build: ./ml-models
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DB_HOST: db
+      DB_NAME: ${DB_NAME:-cja}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ───── One-time DB setup (creates tables & seeds admin) ─────
+  db-setup:
+    build: ./backend
+    command: node setup_db.js
+    environment:
+      DB_USER: ${DB_USER:-postgres}
+      DB_HOST: db
+      DB_NAME: ${DB_NAME:-cja}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_PORT: 5432
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin123!}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles:
+      - setup
+
+volumes:
+  pgdata:

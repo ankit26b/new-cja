@@ -3,6 +3,8 @@ const router = express.Router();
 const pool = require('../config/db');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 
+const ML_URL = process.env.ML_SERVICE_URL || 'http://localhost:8000';
+
 // Funnel Stages
 const stages = [
     "/product",
@@ -133,7 +135,7 @@ router.get('/predict/:session_id', authMiddleware, adminMiddleware, async (req, 
             );
         }
 
-        const mlResponse = await fetch("http://localhost:8000/predict", {
+                const mlResponse = await fetch(`${ML_URL}/predict`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -175,7 +177,7 @@ router.post('/sentiment', authMiddleware, adminMiddleware, async (req, res) => {
 
         const { text } = req.body;
 
-        const mlResponse = await fetch("http://localhost:8000/sentiment", {
+                const mlResponse = await fetch(`${ML_URL}/sentiment`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ text })

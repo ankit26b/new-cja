@@ -6,12 +6,14 @@ from sklearn.metrics import accuracy_score
 from sklearn.metrics import classification_report
 import joblib
 
+import os
+
 # Connect to PostgreSQL
 conn = psycopg2.connect(
-    host="localhost",
-    database="cja",
-    user="postgres",
-    password="postgres123"
+    host=os.environ.get("DB_HOST", "localhost"),
+    database=os.environ.get("DB_NAME", "cja"),
+    user=os.environ.get("DB_USER", "postgres"),
+    password=os.environ.get("DB_PASSWORD", "postgres")
 )
 
 # Get session data
