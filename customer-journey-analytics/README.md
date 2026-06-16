@@ -154,7 +154,30 @@ node setup_db.js
 
 This will create the `users`, `sessions`, `events`, and `session_features` tables, and seed an admin user if one doesn't exist.
 
-#### 2.5 Start the backend server
+#### 2.5 Run multi-tenant migration (`site_id`) for existing databases
+
+If your DB already existed before the `site_id` update, run:
+
+```bash
+node run_migration.js
+```
+
+This migration is idempotent and will:
+- add `site_id` to `sessions`, `events`, and `session_features`
+- backfill existing rows with `default_site`
+- create indexes on `site_id`
+
+You can verify in `psql`:
+
+```sql
+SELECT table_name, column_name, data_type, column_default
+FROM information_schema.columns
+WHERE table_name IN ('sessions', 'events', 'session_features')
+	AND column_name = 'site_id'
+ORDER BY table_name;
+```
+
+#### 2.6 Start the backend server
 
 ```bash
 # Development (auto-restart on changes)
@@ -257,6 +280,31 @@ You need **three terminals** running simultaneously:
 
 ---
 
+## Standalone Tracker SDK Integration
+
+The platform includes a drop-in standalone script at `tracking-script/tracker.js`.
+
+Clients can integrate with a single snippet in their `<head>`:
+
+```html
+<script>window.CJA_CONFIG={site_id:"YOUR_SITE_ID",track_endpoint:"https://api.yourplatform.com/api/track",funnel:["/products","/cart","/checkout","/order-complete"],debug:false};</script>
+<script src="https://cdn.yourplatform.com/tracker.js" async></script>
+<!-- Paste both lines inside <head> -->
+```
+
+Required config keys:
+- `site_id` (tenant identifier)
+- `track_endpoint` (your backend `/api/track` URL)
+
+The tracker captures page views, SPA route changes, clicks, scroll depth, mouse movement samples, and funnel stage events.
+
+Hosting options for `tracker.js` (no build step required):
+- Netlify static hosting
+- S3 + CloudFront
+- Express static file serving
+
+---
+
 ## Project Structure
 
 ```
@@ -270,6 +318,7 @@ customer-journey-analytics/
 |   +-- routes/              # API routes (auth, tracking, analytics)
 |   +-- server.js            # Entry point
 |   +-- setup_db.js          # Database table creation and admin seeding
+|   +-- run_migration.js     # Idempotent DB migration for site_id columns/indexes
 +-- frontend/                # React + Vite SPA
 |   +-- Dockerfile
 |   +-- public/              # Static assets and tracking script
@@ -284,7 +333,7 @@ customer-journey-analytics/
 |   +-- train_model.py       # Train XGBoost on real data
 |   +-- create_dummy_model.py  # Generate dummy model for testing
 |   +-- run.py               # Uvicorn launcher
-+-- tracking-script/         # Standalone tracking JS snippet
++-- tracking-script/         # Standalone tracking SDK (tracker.js)
 ```
 
 ---
