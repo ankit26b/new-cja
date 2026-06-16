@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/db');
-const { authMiddleware, adminMiddleware } = require('../middleware/auth');
+// Multi-tenant: import requireSiteId alongside existing auth middleware
+const { authMiddleware, adminMiddleware, requireSiteId } = require('../middleware/auth');
 
 const ML_URL = process.env.ML_SERVICE_URL || 'http://localhost:8000';
 
@@ -13,14 +14,18 @@ const stages = [
     "/payment"
 ];
 
-router.get('/funnel', authMiddleware, adminMiddleware, async (req, res) => {
+// Multi-tenant: requireSiteId ensures site_id query param is present
+router.get('/funnel', authMiddleware, adminMiddleware, requireSiteId, async (req, res) => {
     try {
+        // Filter events by site_id for tenant isolation
+        const site_id = req.siteId;
 
         const result = await pool.query(`
             SELECT session_id, page_url
             FROM events
             WHERE event_type = 'page_view'
-        `);
+              AND site_id = $1
+        `, [site_id]);
 
         const sessionStages = {};
 
@@ -67,10 +72,12 @@ router.get('/funnel', authMiddleware, adminMiddleware, async (req, res) => {
 
 
 // Heatmap API
-router.get('/heatmap', authMiddleware, adminMiddleware, async (req, res) => {
+// Multi-tenant: filter heatmap data by site_id
+router.get('/heatmap', authMiddleware, adminMiddleware, requireSiteId, async (req, res) => {
     try {
 
         const { page } = req.query;
+        const site_id = req.siteId;
 
         if (!page) {
             return res.status(400).json({ error: "Page query param required" });
@@ -80,8 +87,9 @@ router.get('/heatmap', authMiddleware, adminMiddleware, async (req, res) => {
             `SELECT x, y
              FROM events
              WHERE event_type IN ('click', 'mousemove')
-             AND page_url = $1`,
-            [page]
+             AND page_url = $1
+             AND site_id = $2`,
+            [page, site_id]
         );
 
         res.json(result.rows);
@@ -93,15 +101,17 @@ router.get('/heatmap', authMiddleware, adminMiddleware, async (req, res) => {
 });
 
 
-router.get('/predict/:session_id', authMiddleware, adminMiddleware, async (req, res) => {
+// Multi-tenant: filter prediction lookup by site_id
+router.get('/predict/:session_id', authMiddleware, adminMiddleware, requireSiteId, async (req, res) => {
     try {
         const { session_id } = req.params;
+        const site_id = req.siteId;
 
         const result = await pool.query(
             `SELECT duration, total_clicks, max_scroll_depth, total_pages
              FROM sessions
-             WHERE session_id = $1`,
-            [session_id]
+             WHERE session_id = $1 AND site_id = $2`,
+            [session_id, site_id]
         );
 
         if (result.rows.length === 0) {
@@ -111,16 +121,19 @@ router.get('/predict/:session_id', authMiddleware, adminMiddleware, async (req, 
         const session = result.rows[0];
 
         // Fetch normalization maxima and session scroll depth for engagement score
+        // Multi-tenant: scope aggregation to current site_id
         const maxResult = await pool.query(
             `SELECT
                COALESCE(MAX(session_duration), 1) AS max_duration,
                COALESCE(MAX(total_clicks), 1) AS max_clicks
-             FROM session_features`
+             FROM session_features
+             WHERE site_id = $1`,
+            [site_id]
         );
         const sfResult = await pool.query(
             `SELECT avg_scroll_depth, session_duration, total_clicks
-             FROM session_features WHERE session_id = $1`,
-            [session_id]
+             FROM session_features WHERE session_id = $1 AND site_id = $2`,
+            [session_id, site_id]
         );
 
         let engagement_score = 0;
@@ -157,22 +170,26 @@ router.get('/predict/:session_id', authMiddleware, adminMiddleware, async (req, 
     }
 });
 
-router.get('/scrollmap', authMiddleware, adminMiddleware, async (req, res) => {
+// Multi-tenant: filter scrollmap data by site_id
+router.get('/scrollmap', authMiddleware, adminMiddleware, requireSiteId, async (req, res) => {
     const { page } = req.query;
+    const site_id = req.siteId;
 
     const result = await pool.query(
         `SELECT scroll_depth
          FROM events
          WHERE event_type = 'scroll'
-         AND page_url = $1`,
-        [page]
+         AND page_url = $1
+         AND site_id = $2`,
+        [page, site_id]
     );
 
     res.json(result.rows);
 });
 
 //sentiments endpoint
-router.post('/sentiment', authMiddleware, adminMiddleware, async (req, res) => {
+// Sentiment analysis — no DB query, but requireSiteId enforces tenant context
+router.post('/sentiment', authMiddleware, adminMiddleware, requireSiteId, async (req, res) => {
     try {
 
         const { text } = req.body;
@@ -194,14 +211,18 @@ router.post('/sentiment', authMiddleware, adminMiddleware, async (req, res) => {
 });
 
 // Time-on-page analytics
-router.get('/analytics/time-on-page', authMiddleware, adminMiddleware, async (req, res) => {
+// Multi-tenant: filter time-on-page by site_id
+router.get('/analytics/time-on-page', authMiddleware, adminMiddleware, requireSiteId, async (req, res) => {
     try {
+        const site_id = req.siteId;
+
         const result = await pool.query(`
             SELECT session_id, page_url, timestamp
             FROM events
             WHERE event_type = 'page_view'
+              AND site_id = $1
             ORDER BY session_id, timestamp ASC
-        `);
+        `, [site_id]);
 
         // Group by session
         const sessions = {};
@@ -266,14 +287,18 @@ router.get('/analytics/time-on-page', authMiddleware, adminMiddleware, async (re
 });
 
 // Entry & Exit Pages
-router.get('/analytics/entry-exit', authMiddleware, adminMiddleware, async (req, res) => {
+// Multi-tenant: filter entry-exit by site_id
+router.get('/analytics/entry-exit', authMiddleware, adminMiddleware, requireSiteId, async (req, res) => {
     try {
+        const site_id = req.siteId;
+
         const { rows } = await pool.query(`
             SELECT session_id, page_url, timestamp
             FROM events
             WHERE event_type = 'page_view'
+              AND site_id = $1
             ORDER BY session_id, timestamp ASC
-        `);
+        `, [site_id]);
 
         if (rows.length === 0) {
             return res.json({ entryPages: [], exitPages: [] });
@@ -324,21 +349,25 @@ router.get('/analytics/entry-exit', authMiddleware, adminMiddleware, async (req,
 });
 
 // Rage Clicks
-router.get('/analytics/rage-clicks', authMiddleware, adminMiddleware, async (req, res) => {
+// Multi-tenant: filter rage-clicks by site_id
+router.get('/analytics/rage-clicks', authMiddleware, adminMiddleware, requireSiteId, async (req, res) => {
     try {
         const { page } = req.query;
+        const site_id = req.siteId;
 
-        const queryParams = [];
+        // Build parameterized query — site_id is always param $1
+        const queryParams = [site_id];
         let pageFilter = '';
         if (page) {
             queryParams.push(page);
-            pageFilter = `AND page_url = $1`;
+            pageFilter = `AND page_url = $2`;
         }
 
         const { rows } = await pool.query(
             `SELECT session_id, page_url, x, y, timestamp
              FROM events
              WHERE event_type = 'click'
+             AND site_id = $1
              ${pageFilter}
              ORDER BY session_id, timestamp ASC`,
             queryParams
@@ -432,17 +461,20 @@ router.get('/analytics/rage-clicks', authMiddleware, adminMiddleware, async (req
 const CUSTOMER_PAGES = ['/', '/product', '/cart', '/checkout', '/payment'];
 
 // Navigation Paths
-router.get('/nav-paths', authMiddleware, adminMiddleware, async (req, res) => {
+// Multi-tenant: filter nav-paths by site_id
+router.get('/nav-paths', authMiddleware, adminMiddleware, requireSiteId, async (req, res) => {
     try {
         const limit = parseInt(req.query.limit, 10) || 10;
+        const site_id = req.siteId;
 
         const result = await pool.query(`
             SELECT session_id, page_url, timestamp
             FROM events
             WHERE event_type = 'page_view'
               AND page_url = ANY($1)
+              AND site_id = $2
             ORDER BY session_id, timestamp
-        `, [CUSTOMER_PAGES]);
+        `, [CUSTOMER_PAGES, site_id]);
 
         // Group pages by session in visit order
         const sessions = {};
@@ -500,9 +532,12 @@ router.get('/nav-paths', authMiddleware, adminMiddleware, async (req, res) => {
 });
 
 // Conversion Influence
-router.get('/conversion-influence', authMiddleware, adminMiddleware, async (req, res) => {
+// Multi-tenant: filter conversion-influence by site_id
+router.get('/conversion-influence', authMiddleware, adminMiddleware, requireSiteId, async (req, res) => {
     try {
-        // Fetch sessions with their conversion status
+        const site_id = req.siteId;
+
+        // Fetch sessions with their conversion status — scoped to site_id
         const result = await pool.query(`
             SELECT
                 s.session_id,
@@ -516,12 +551,14 @@ router.get('/conversion-influence', authMiddleware, adminMiddleware, async (req,
                         WHERE e.session_id = s.session_id
                           AND e.page_url = '/payment'
                           AND e.event_type = 'page_view'
+                          AND e.site_id = $1
                     ) THEN true
                     ELSE false
                 END AS converted
             FROM sessions s
             WHERE s.duration IS NOT NULL
-        `);
+              AND s.site_id = $1
+        `, [site_id]);
 
         const metrics = ['total_clicks', 'avg_scroll_depth', 'session_duration', 'pages_visited'];
 
@@ -595,11 +632,16 @@ router.get('/conversion-influence', authMiddleware, adminMiddleware, async (req,
 });
 
 // Engagement Scores
-router.get('/engagement-scores', authMiddleware, adminMiddleware, async (req, res) => {
+// Multi-tenant: filter engagement-scores by site_id
+router.get('/engagement-scores', authMiddleware, adminMiddleware, requireSiteId, async (req, res) => {
     try {
+        const site_id = req.siteId;
+
         const result = await pool.query(
             `SELECT session_id, avg_scroll_depth, session_duration, total_clicks, max_funnel_stage
-             FROM session_features`
+             FROM session_features
+             WHERE site_id = $1`,
+            [site_id]
         );
 
         const sessions = result.rows;

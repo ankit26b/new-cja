@@ -17,11 +17,12 @@ async function createTables() {
 
     console.log('✅ users table created');
 
-    // Create sessions table
+    // Create sessions table — includes site_id for multi-tenant support
     await pool.query(`
       CREATE TABLE IF NOT EXISTS sessions (
         id SERIAL PRIMARY KEY,
         session_id VARCHAR(255) UNIQUE NOT NULL,
+        site_id VARCHAR(64) NOT NULL DEFAULT 'default_site',
         start_time TIMESTAMP DEFAULT NOW(),
         end_time TIMESTAMP,
         duration DECIMAL,
@@ -33,7 +34,7 @@ async function createTables() {
 
     console.log('✅ sessions table created');
 
-    // Create events table
+    // Create events table — includes site_id for multi-tenant support
     await pool.query(`
       CREATE TABLE IF NOT EXISTS events (
         id SERIAL PRIMARY KEY,
@@ -43,6 +44,7 @@ async function createTables() {
         y INTEGER,
         page_url VARCHAR(255),
         scroll_depth INTEGER,
+        site_id VARCHAR(64) NOT NULL DEFAULT 'default_site',
         timestamp TIMESTAMP DEFAULT NOW(),
         FOREIGN KEY (session_id) REFERENCES sessions(session_id) ON DELETE CASCADE
       )
@@ -50,11 +52,12 @@ async function createTables() {
 
     console.log('✅ events table created');
 
-    // Create session_features table
+    // Create session_features table — includes site_id for multi-tenant support
     await pool.query(`
       CREATE TABLE IF NOT EXISTS session_features (
         id SERIAL PRIMARY KEY,
         session_id VARCHAR(255) UNIQUE NOT NULL,
+        site_id VARCHAR(64) NOT NULL DEFAULT 'default_site',
         total_clicks INTEGER DEFAULT 0,
         avg_scroll_depth DECIMAL DEFAULT 0,
         session_duration DECIMAL DEFAULT 0,

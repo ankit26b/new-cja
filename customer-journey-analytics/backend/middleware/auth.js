@@ -27,4 +27,17 @@ const adminMiddleware = (req, res, next) => {
     next();
 };
 
-module.exports = { authMiddleware, adminMiddleware, JWT_SECRET };
+// ---------- Multi-tenant: require site_id ----------
+// Checks query params (GET) and request body (POST/PUT) for a non-empty site_id.
+// Returns 400 if missing so downstream handlers can safely rely on it.
+const requireSiteId = (req, res, next) => {
+    const siteId = req.query.site_id || req.body?.site_id;
+    if (!siteId || typeof siteId !== 'string' || siteId.trim() === '') {
+        return res.status(400).json({ error: 'site_id is required' });
+    }
+    // Normalise and attach for easy access in route handlers
+    req.siteId = siteId.trim();
+    next();
+};
+
+module.exports = { authMiddleware, adminMiddleware, requireSiteId, JWT_SECRET };
