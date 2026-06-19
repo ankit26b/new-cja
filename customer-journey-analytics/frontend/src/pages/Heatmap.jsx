@@ -11,7 +11,7 @@ export default function Heatmap() {
 
   useEffect(() => {
 
-    fetch(`http://localhost:5000/api/heatmap?page=${page}`, {
+    fetch(`http://localhost:5000/api/heatmap?page=${page}&site_id=default_site`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },

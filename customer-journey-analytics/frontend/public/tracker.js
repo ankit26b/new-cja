@@ -122,6 +122,18 @@
     }
   }
 
+  function normalizePath(path) {
+    try {
+      var value = String(path || '/');
+      if (value.length > 1 && value.charAt(value.length - 1) === '/') {
+        value = value.slice(0, -1);
+      }
+      return value || '/';
+    } catch (_) {
+      return '/';
+    }
+  }
+
   // -------------------------
   // Queue + Transport
   // -------------------------
@@ -238,8 +250,21 @@
   // -------------------------
   function getFunnelStage(pathname) {
     try {
+      var normalizedPath = normalizePath(pathname);
+
       for (var i = 0; i < FUNNEL.length; i++) {
-        if (FUNNEL[i] === pathname) return i;
+        var funnelEntry = String(FUNNEL[i] || '');
+        var normalizedEntry = normalizePath(funnelEntry);
+
+        // Prefix mode: if funnel entry ends with '/', treat it as a dynamic prefix
+        // e.g. '/book/' should match '/book/1', '/book/abc', etc.
+        if (funnelEntry.charAt(funnelEntry.length - 1) === '/') {
+          if (normalizedPath.indexOf(normalizedEntry) === 0) return i;
+          continue;
+        }
+
+        // Exact mode for static funnel paths like '/cart' and '/checkout'
+        if (normalizedEntry === normalizedPath) return i;
       }
       return null;
     } catch (_) {

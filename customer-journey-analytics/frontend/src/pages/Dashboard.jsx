@@ -12,13 +12,33 @@ export default function Dashboard() {
   const [data, setData] = useState([]);
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/funnel", {
+    if (!token) return;
+    
+    fetch("http://localhost:5000/api/funnel?site_id=default_site", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     })
-      .then(res => res.json())
-      .then(data => setData(data));
+      .then(res => {
+        if (!res.ok) {
+          console.error(`API returned ${res.status}`);
+          return [];
+        }
+        return res.json();
+      })
+      .then(data => {
+        // Ensure data is an array
+        if (Array.isArray(data)) {
+          setData(data);
+        } else {
+          console.error("Funnel data is not an array:", data);
+          setData([]);
+        }
+      })
+      .catch(err => {
+        console.error("Funnel fetch error:", err);
+        setData([]);
+      });
   }, [token]);
 
   const [risk, setRisk] = useState(null);
@@ -28,7 +48,7 @@ export default function Dashboard() {
     const sessionId = sessionStorage.getItem("cja_session_id");
     setRiskError('');
 
-    fetch(`http://localhost:5000/api/predict/${sessionId}`, {
+    fetch(`http://localhost:5000/api/predict/${sessionId}?site_id=default_site`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },

@@ -11,7 +11,7 @@ export default function ScrollHeatmap() {
 
     useEffect(() => {
 
-        fetch(`http://localhost:5000/api/scrollmap?page=${page}`, {
+        fetch(`http://localhost:5000/api/scrollmap?page=${page}&site_id=default_site`, {
             headers: {
                 Authorization: `Bearer ${token}`,
             },

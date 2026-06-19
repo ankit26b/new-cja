@@ -13,7 +13,7 @@ function EntryExit() {
     useEffect(() => {
         if (!token) return;
 
-        fetch('http://localhost:5000/api/analytics/entry-exit', {
+        fetch('http://localhost:5000/api/analytics/entry-exit?site_id=default_site', {
             headers: { Authorization: `Bearer ${token}` },
         })
             .then(res => {

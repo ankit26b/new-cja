@@ -22,6 +22,7 @@ function PageTracker() {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
+        site_id: "default_site",
         session_id: sessionId,
         event_type: "page_view",
         x: null,

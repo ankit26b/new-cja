@@ -18,7 +18,7 @@ export default function EngagementScores() {
   useEffect(() => {
     if (!token) return;
     setLoading(true);
-    fetch('http://localhost:5000/api/engagement-scores', {
+    fetch('http://localhost:5000/api/engagement-scores?site_id=default_site', {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(res => {

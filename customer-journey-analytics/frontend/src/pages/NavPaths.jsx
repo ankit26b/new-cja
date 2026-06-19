@@ -46,7 +46,7 @@ export default function NavPaths() {
   useEffect(() => {
     if (!token) return;
     setLoading(true);
-    fetch('http://localhost:5000/api/nav-paths?limit=50', {
+    fetch('http://localhost:5000/api/nav-paths?limit=50&site_id=default_site', {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(res => {

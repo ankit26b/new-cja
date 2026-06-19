@@ -22,7 +22,7 @@ export default function ConversionInfluencer() {
   useEffect(() => {
     if (!token) return;
     setLoading(true);
-    fetch('http://localhost:5000/api/conversion-influence', {
+    fetch('http://localhost:5000/api/conversion-influence?site_id=default_site', {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(res => {

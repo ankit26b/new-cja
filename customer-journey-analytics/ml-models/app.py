@@ -5,6 +5,20 @@ from transformers import pipeline
 
 app = FastAPI()
 
+
+@app.get("/")
+def root():
+    return {
+        "service": "CJA ML API",
+        "status": "running",
+        "endpoints": ["POST /predict", "POST /sentiment", "GET /health", "GET /docs"]
+    }
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
 #Load XGBoost model
 model = joblib.load("xgboost_model.pkl")
 

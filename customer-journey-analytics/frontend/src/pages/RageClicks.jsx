@@ -23,7 +23,7 @@ function RageClicks() {
         setError('');
         setZones([]);
 
-        fetch(`http://localhost:5000/api/analytics/rage-clicks?page=${encodeURIComponent(page)}`, {
+        fetch(`http://localhost:5000/api/analytics/rage-clicks?page=${encodeURIComponent(page)}&site_id=default_site`, {
             headers: { Authorization: `Bearer ${token}` },
         })
             .then(res => {

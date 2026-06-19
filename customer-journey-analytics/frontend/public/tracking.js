@@ -1,5 +1,8 @@
 (function () {
 
+    // Get site_id from config or use default
+    const siteId = (window.CJA_CONFIG && window.CJA_CONFIG.site_id) || "default_site";
+
     // Generate or reuse session ID
     function getSessionId() {
         let sessionId = sessionStorage.getItem("cja_session_id");
@@ -28,6 +31,7 @@
     // Track Clicks
     document.addEventListener("click", function (event) {
         sendEvent({
+            site_id: siteId,
             session_id: sessionId,
             event_type: "click",
             x: event.clientX,
@@ -45,6 +49,7 @@
             lastScroll = window.scrollY;
 
             sendEvent({
+                site_id: siteId,
                 session_id: sessionId,
                 event_type: "scroll",
                 x: null,

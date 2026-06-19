@@ -1,0 +1,42 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Demo Bookstore - Order Confirmed</title>
+  <script>
+    window.CJA_CONFIG = {
+      site_id: "demo_bookstore_002",
+      track_endpoint: "http://localhost:5000/api/track",
+      funnel: ["/book/", "/cart", "/checkout", "/order-confirmed"],
+      debug: true
+    };
+  </script>
+  <script src="../tracking-script/tracker.js" async></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Demo Bookstore</h1>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/book/101">Books</a>
+      <a href="/order-confirmed">Order Confirmed</a>
+    </nav>
+  </header>
+
+  <main>
+    <h2>Order Confirmed</h2>
+    <div class="card">
+      <p>Thank you! Your order #BK-2026-0001 is confirmed.</p>
+      <p>You reached the final funnel stage for the bookstore demo.</p>
+      <a class="btn secondary" href="/">Return Home</a>
+    </div>
+  </main>
+
+  <footer>
+    <p>Funnel stage route: <strong>/order-confirmed</strong></p>
+  </footer>
+</body>
+</html>
+

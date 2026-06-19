@@ -1,0 +1,45 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Demo Bookstore - Book 102</title>
+  <script>
+    window.CJA_CONFIG = {
+      site_id: "demo_bookstore_002",
+      track_endpoint: "http://localhost:5000/api/track",
+      funnel: ["/book/", "/cart", "/checkout", "/order-confirmed"],
+      debug: true
+    };
+  </script>
+  <script src="../../tracking-script/tracker.js" async></script>
+  <link rel="stylesheet" href="../styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Demo Bookstore</h1>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/book/101">Book 101</a>
+      <a href="/book/102">Book 102</a>
+      <a href="/cart">Cart</a>
+    </nav>
+  </header>
+
+  <main>
+    <h2>Book 102 â€” Event Streaming Patterns</h2>
+    <p>This page is another dynamic-style detail route in /book/:id format.</p>
+    <p><strong>Price:</strong> $34.99</p>
+    <a class="btn" href="/cart">Add to Cart</a>
+
+    <div class="spacer">
+      <p style="padding:12px;">Extra content for scroll-depth sampling.</p>
+    </div>
+  </main>
+
+  <footer>
+    <p>Book detail route for dynamic prefix matching: <strong>/book/102</strong></p>
+  </footer>
+</body>
+</html>
+

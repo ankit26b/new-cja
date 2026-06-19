@@ -1,0 +1,47 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Demo Bookstore - Checkout</title>
+  <script>
+    window.CJA_CONFIG = {
+      site_id: "demo_bookstore_002",
+      track_endpoint: "http://localhost:5000/api/track",
+      funnel: ["/book/", "/cart", "/checkout", "/order-confirmed"],
+      debug: true
+    };
+  </script>
+  <script src="../tracking-script/tracker.js" async></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Demo Bookstore</h1>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/cart">Cart</a>
+      <a href="/checkout">Checkout</a>
+    </nav>
+  </header>
+
+  <main>
+    <h2>Checkout</h2>
+    <div class="card">
+      <p>Name: Jane Reader</p>
+      <p>Address: 123 Sample Street</p>
+      <p>Payment: **** **** **** 4242</p>
+      <a class="btn" href="/order-confirmed">Place Order</a>
+    </div>
+
+    <div class="spacer">
+      <p style="padding:12px;">Checkout interaction region.</p>
+    </div>
+  </main>
+
+  <footer>
+    <p>Funnel stage route: <strong>/checkout</strong></p>
+  </footer>
+</body>
+</html>
+

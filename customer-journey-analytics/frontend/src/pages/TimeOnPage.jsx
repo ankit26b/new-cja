@@ -12,7 +12,7 @@ function TimeOnPage() {
     useEffect(() => {
         if (!token) return;
 
-        fetch('http://localhost:5000/api/analytics/time-on-page', {
+        fetch('http://localhost:5000/api/analytics/time-on-page?site_id=default_site', {
             headers: { Authorization: `Bearer ${token}` },
         })
             .then(res => {

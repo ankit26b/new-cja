@@ -1,0 +1,60 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Demo Bookstore - Home</title>
+  <script>
+    window.CJA_CONFIG = {
+      site_id: "demo_bookstore_002",
+      track_endpoint: "http://localhost:5000/api/track",
+      funnel: ["/book/", "/cart", "/checkout", "/order-confirmed"],
+      debug: true
+    };
+  </script>
+  <script src="/tracker.js" async></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Demo Bookstore</h1>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/cart">Cart</a>
+      <a href="/checkout">Checkout</a>
+    </nav>
+  </header>
+
+  <main>
+    <h2>Featured Books</h2>
+    <p>This site is a static non-React fixture to validate tracker portability.</p>
+
+    <section class="grid">
+      <article class="card">
+        <h3>Book 101</h3>
+        <p>Introduction to Multi-Tenant Analytics.</p>
+        <a class="btn" href="/book/101">View Book</a>
+      </article>
+      <article class="card">
+        <h3>Book 102</h3>
+        <p>Event Streaming Patterns.</p>
+        <a class="btn" href="/book/102">View Book</a>
+      </article>
+      <article class="card">
+        <h3>Book 103</h3>
+        <p>Building Reliable SDKs.</p>
+        <a class="btn" href="/book/101">View Book</a>
+      </article>
+    </section>
+
+    <div class="spacer">
+      <p style="padding:12px;">Scroll area for scroll-depth tracking tests.</p>
+    </div>
+  </main>
+
+  <footer>
+    <p>Tracker test fixture â€” Site ID: <strong>demo_bookstore_002</strong></p>
+  </footer>
+</body>
+</html>
+

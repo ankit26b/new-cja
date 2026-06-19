@@ -1,0 +1,48 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Demo Bookstore - Book 101</title>
+  <script>
+    window.CJA_CONFIG = {
+      site_id: "demo_bookstore_002",
+      track_endpoint: "http://localhost:5000/api/track",
+      funnel: ["/book/", "/cart", "/checkout", "/order-confirmed"],
+      debug: true
+    };
+  </script>
+  <script src="/tracker.js" async></script>
+  <link rel="stylesheet" href="../../styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Demo Bookstore</h1>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/book/101">Book 101</a>
+      <a href="/cart">Cart</a>
+      <a href="/checkout">Checkout</a>
+    </nav>
+  </header>
+
+  <main>
+    <h2>Book 101 â€” Introduction to Multi-Tenant Analytics</h2>
+    <p>Book detail page acts as the Product stage in this funnel.</p>
+    <p><strong>ISBN:</strong> 978-0-000-00001-1</p>
+    <p><strong>Price:</strong> $29.99</p>
+
+    <a class="btn" href="/cart">Add to Cart</a>
+    <a class="btn secondary" href="/book/102" style="margin-left:8px;">Next Book</a>
+
+    <div class="spacer">
+      <p style="padding:12px;">Move mouse and scroll here to generate interaction events.</p>
+    </div>
+  </main>
+
+  <footer>
+    <p>Book detail route for dynamic prefix matching: <strong>/book/101</strong></p>
+  </footer>
+</body>
+</html>
+
