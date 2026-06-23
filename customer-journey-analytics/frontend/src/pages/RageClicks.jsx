@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useSite } from '../context/SiteContext';
 
 const PAGES = ['/product', '/cart', '/checkout', '/payment'];
 const VIEWPORT_W = 1280;
@@ -8,6 +9,7 @@ const VIEWPORT_H = 800;
 
 function RageClicks() {
     const { token } = useAuth();
+    const { currentSiteId, availableSites } = useSite();
     const [selectedPage, setSelectedPage] = useState('/product');
     const [zones, setZones] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -17,27 +19,44 @@ function RageClicks() {
     const canvasRef = useRef(null);
     const containerRef = useRef(null);
 
-    const fetchRageClicks = useCallback((page) => {
-        if (!token) return;
+    const fetchRageClicks = useCallback((page, signal) => {
+        if (!token || !currentSiteId) return;
         setLoading(true);
         setError('');
         setZones([]);
 
-        fetch(`http://localhost:5000/api/analytics/rage-clicks?page=${encodeURIComponent(page)}&site_id=default_site`, {
+        fetch(`http://localhost:5000/api/analytics/rage-clicks?page=${encodeURIComponent(page)}&site_id=${encodeURIComponent(currentSiteId)}`, {
             headers: { Authorization: `Bearer ${token}` },
+            signal,
         })
             .then(res => {
                 if (!res.ok) throw new Error(`Server error: ${res.status}`);
                 return res.json();
             })
             .then(data => setZones(data))
-            .catch(err => setError(err.message || 'Failed to fetch rage click data'))
-            .finally(() => setLoading(false));
-    }, [token]);
+            .catch(err => {
+                if (err.name === 'AbortError') return;
+                setError(err.message || 'Failed to fetch rage click data');
+            })
+            .finally(() => {
+                if (!signal?.aborted) {
+                    setLoading(false);
+                }
+            });
+    }, [token, currentSiteId]);
 
     useEffect(() => {
-        fetchRageClicks(selectedPage);
-    }, [selectedPage, fetchRageClicks]);
+        if (!token || !currentSiteId) {
+            setLoading(true);
+            setError('');
+            setZones([]);
+            return;
+        }
+
+        const controller = new AbortController();
+        fetchRageClicks(selectedPage, controller.signal);
+        return () => controller.abort();
+    }, [selectedPage, fetchRageClicks, token, currentSiteId]);
 
     // Draw canvas
     useEffect(() => {
@@ -112,6 +131,13 @@ function RageClicks() {
                 <div>
                     <h1 style={styles.title}>Rage Clicks</h1>
                     <p style={styles.subtitle}>Zones where users clicked 3+ times rapidly — signals frustration.</p>
+                    {currentSiteId && (
+                        <div style={{ fontSize: 12, color: '#888', marginTop: 6 }}>
+                            Site: <span style={{ fontWeight: 600, color: '#64748b' }}>
+                                {availableSites.find(s => s.site_id === currentSiteId)?.display_name || currentSiteId}
+                            </span>
+                        </div>
+                    )}
                 </div>
                 <Link to="/dashboard" style={styles.backLink}>← Back to Dashboard</Link>
             </div>

@@ -173,6 +173,33 @@ router.get('/users', authMiddleware, adminMiddleware, async (req, res) => {
     }
 });
 
+// List all users with assigned site_ids (admin only)
+router.get('/users-with-sites', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT
+                u.id,
+                u.email,
+                u.role,
+                u.created_at,
+                COALESCE(
+                    ARRAY_AGG(us.site_id ORDER BY us.site_id)
+                        FILTER (WHERE us.site_id IS NOT NULL),
+                    '{}'
+                ) AS site_ids
+            FROM users u
+            LEFT JOIN user_sites us ON us.user_id = u.id
+            GROUP BY u.id, u.email, u.role, u.created_at
+            ORDER BY u.id ASC
+        `);
+
+        res.json({ users: result.rows });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch users with site access' });
+    }
+});
+
 // Promote / demote user role (admin only)
 router.patch('/users/:id/role', authMiddleware, adminMiddleware, async (req, res) => {
     try {
@@ -200,6 +227,70 @@ router.patch('/users/:id/role', authMiddleware, adminMiddleware, async (req, res
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Role update failed' });
+    }
+});
+
+// Replace assigned sites for a user (admin only)
+router.patch('/users/:id/sites', authMiddleware, adminMiddleware, async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const { id } = req.params;
+        const { site_ids } = req.body;
+
+        if (!Array.isArray(site_ids)) {
+            return res.status(400).json({ error: 'site_ids must be an array' });
+        }
+
+        const targetUser = await client.query(
+            'SELECT id, role FROM users WHERE id = $1',
+            [id]
+        );
+
+        if (targetUser.rows.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        if (targetUser.rows[0].role === 'admin') {
+            return res.status(400).json({ error: 'Site assignment is managed automatically for master admins' });
+        }
+
+        const normalizedSiteIds = [...new Set(site_ids
+            .filter((value) => typeof value === 'string')
+            .map((value) => value.trim())
+            .filter(Boolean))];
+
+        if (normalizedSiteIds.length > 0) {
+            const sitesExist = await client.query(
+                'SELECT site_id FROM sites WHERE site_id = ANY($1)',
+                [normalizedSiteIds]
+            );
+            if (sitesExist.rows.length !== normalizedSiteIds.length) {
+                return res.status(400).json({ error: 'One or more site_ids are invalid' });
+            }
+        }
+
+        await client.query('BEGIN');
+        await client.query('DELETE FROM user_sites WHERE user_id = $1', [id]);
+
+        for (const siteId of normalizedSiteIds) {
+            await client.query(
+                'INSERT INTO user_sites (user_id, site_id) VALUES ($1, $2)',
+                [id, siteId]
+            );
+        }
+        await client.query('COMMIT');
+
+        res.json({
+            message: 'Site access updated successfully',
+            user_id: Number(id),
+            site_ids: normalizedSiteIds,
+        });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error(error);
+        res.status(500).json({ error: 'Failed to update site access' });
+    } finally {
+        client.release();
     }
 });
 

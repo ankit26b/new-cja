@@ -37,13 +37,26 @@ def predict(data: dict):
     #                  + (normalized_clicks * 0.25)
     engagement_score = data.get("engagement_score", 0)
 
-    features = np.array([[
+    features_4 = np.array([[
+        data["duration"],
+        data["total_clicks"],
+        data["max_scroll_depth"],
+        data["total_pages"]
+    ]])
+
+    features_5 = np.array([[
         data["duration"],
         data["total_clicks"],
         data["max_scroll_depth"],
         data["total_pages"],
         engagement_score
     ]])
+
+    model_feature_count = getattr(model, "n_features_in_", None)
+    if model_feature_count == 4:
+        features = features_4
+    else:
+        features = features_5
 
     prediction = model.predict(features)[0]
     probability = model.predict_proba(features)[0][1]

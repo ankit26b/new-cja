@@ -68,6 +68,38 @@ async function createTables() {
     `);
 
     console.log('✅ session_features table created');
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS sites (
+        site_id VARCHAR(64) PRIMARY KEY,
+        display_name VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    console.log('✅ sites table created');
+
+    await pool.query(`
+      INSERT INTO sites (site_id, display_name)
+      VALUES
+        ('ecommerce_001', 'Demo E-Commerce Store'),
+        ('demo_bookstore_002', 'Demo Bookstore')
+      ON CONFLICT (site_id) DO NOTHING
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS user_sites (
+        user_id INTEGER NOT NULL,
+        site_id VARCHAR(64) NOT NULL,
+        assigned_at TIMESTAMP DEFAULT NOW(),
+        PRIMARY KEY (user_id, site_id),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (site_id) REFERENCES sites(site_id) ON DELETE CASCADE
+      )
+    `);
+
+    console.log('✅ user_sites table created');
+
     console.log('Database setup complete!');
 
     // Optional admin seed from environment variables
@@ -82,10 +114,30 @@ async function createTables() {
           'INSERT INTO users (email, password, role) VALUES ($1, $2, $3)',
           [ADMIN_EMAIL, hashedPassword, 'admin']
         );
+
+        await pool.query(
+          `INSERT INTO user_sites (user_id, site_id)
+           SELECT u.id, s.site_id
+           FROM users u
+           CROSS JOIN sites s
+           WHERE u.email = $1
+           ON CONFLICT (user_id, site_id) DO NOTHING`,
+          [ADMIN_EMAIL]
+        );
+
         console.log(`✅ Admin user seeded: ${ADMIN_EMAIL}`);
       } else {
         console.log('ℹ️  Admin already exists — skipping seed.');
       }
+
+      await pool.query(
+        `INSERT INTO user_sites (user_id, site_id)
+         SELECT u.id, s.site_id
+         FROM users u
+         CROSS JOIN sites s
+         WHERE u.role = 'admin'
+         ON CONFLICT (user_id, site_id) DO NOTHING`
+      );
     }
 
   } catch (err) {

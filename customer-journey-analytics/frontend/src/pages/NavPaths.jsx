@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useSite } from '../context/SiteContext';
 
 const BADGE_COLORS = {
   '/':         { bg: '#e2e8f0', text: '#475569' },
@@ -38,29 +39,50 @@ const FILTERS = ['All', 'Converted', 'Drop-off'];
 
 export default function NavPaths() {
   const { token } = useAuth();
+  const { currentSiteId, availableSites } = useSite();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('All');
 
   useEffect(() => {
-    if (!token) return;
+    if (!token || !currentSiteId) {
+      setLoading(true);
+      setError('');
+      setData(null);
+      return;
+    }
+
+    const controller = new AbortController();
     setLoading(true);
-    fetch('http://localhost:5000/api/nav-paths?limit=50&site_id=default_site', {
+    setError('');
+    setData(null);
+
+    fetch(`http://localhost:5000/api/nav-paths?limit=50&site_id=${encodeURIComponent(currentSiteId)}`, {
       headers: { Authorization: `Bearer ${token}` },
+      signal: controller.signal,
     })
       .then(res => {
         if (!res.ok) throw new Error(`Server error: ${res.status}`);
         return res.json();
       })
       .then(d => setData(d))
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [token]);
+      .catch(err => {
+        if (err.name === 'AbortError') return;
+        setError(err.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      });
+
+    return () => controller.abort();
+  }, [token, currentSiteId]);
 
   if (loading) return <div style={styles.container}><p style={{ textAlign: 'center', marginTop: 60 }}>Loading…</p></div>;
   if (error) return <div style={styles.container}><p style={{ color: '#dc2626', textAlign: 'center', marginTop: 60 }}>{error}</p></div>;
-  if (!data) return null;
+  if (!data) return <div style={styles.container}><p style={{ color: '#64748b', textAlign: 'center', marginTop: 60 }}>No sessions recorded yet for this site.</p></div>;
 
   const { paths, summary } = data;
 
@@ -79,6 +101,13 @@ export default function NavPaths() {
         <div>
           <h1 style={styles.title}>Navigation Paths</h1>
           <p style={styles.subtitle}>Most common journeys users take through your site.</p>
+          {currentSiteId && (
+            <div style={{ fontSize: 12, color: '#888', marginTop: 6 }}>
+              Site: <span style={{ fontWeight: 600, color: '#64748b' }}>
+                {availableSites.find(s => s.site_id === currentSiteId)?.display_name || currentSiteId}
+              </span>
+            </div>
+          )}
         </div>
         <Link to="/dashboard" style={styles.backLink}>← Back to Dashboard</Link>
       </div>

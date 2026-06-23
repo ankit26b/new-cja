@@ -39,19 +39,19 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/setup-admin" element={<SetupAdmin />} />
 
-        {/* Admin Protected Routes */}
+        {/* Analytics Protected Routes (all authenticated business users + master admin) */}
         <Route path="/dashboard" element={
-          <ProtectedRoute adminOnly>
+          <ProtectedRoute>
             <Dashboard />
           </ProtectedRoute>
         } />
         <Route path="/heatmap" element={
-          <ProtectedRoute adminOnly>
+          <ProtectedRoute>
             <Heatmap />
           </ProtectedRoute>
         } />
         <Route path="/scroll-heatmap" element={
-          <ProtectedRoute adminOnly>
+          <ProtectedRoute>
             <ScrollHeatmap />
           </ProtectedRoute>
         } />
@@ -61,32 +61,32 @@ function App() {
           </ProtectedRoute>
         } />
         <Route path="/time-on-page" element={
-          <ProtectedRoute adminOnly>
+          <ProtectedRoute>
             <TimeOnPage />
           </ProtectedRoute>
         } />
         <Route path="/entry-exit" element={
-          <ProtectedRoute adminOnly>
+          <ProtectedRoute>
             <EntryExit />
           </ProtectedRoute>
         } />
         <Route path="/rage-clicks" element={
-          <ProtectedRoute adminOnly>
+          <ProtectedRoute>
             <RageClicks />
           </ProtectedRoute>
         } />
         <Route path="/nav-paths" element={
-          <ProtectedRoute adminOnly>
+          <ProtectedRoute>
             <NavPaths />
           </ProtectedRoute>
         } />
         <Route path="/conversion-influence" element={
-          <ProtectedRoute adminOnly>
+          <ProtectedRoute>
             <ConversionInfluencer />
           </ProtectedRoute>
         } />
         <Route path="/engagement-scores" element={
-          <ProtectedRoute adminOnly>
+          <ProtectedRoute>
             <EngagementScores />
           </ProtectedRoute>
         } />

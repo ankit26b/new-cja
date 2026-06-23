@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const { requireAuthorizedSiteId, getAllowedSiteIdsForUser, isMasterAdmin } = require('./tenant');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
@@ -40,4 +41,12 @@ const requireSiteId = (req, res, next) => {
     next();
 };
 
-module.exports = { authMiddleware, adminMiddleware, requireSiteId, JWT_SECRET };
+module.exports = {
+    authMiddleware,
+    adminMiddleware,
+    requireSiteId,
+    requireAuthorizedSiteId,
+    getAllowedSiteIdsForUser,
+    isMasterAdmin,
+    JWT_SECRET
+};

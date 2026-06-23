@@ -2,23 +2,120 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/db');
 // Multi-tenant: import requireSiteId alongside existing auth middleware
-const { authMiddleware, adminMiddleware, requireSiteId } = require('../middleware/auth');
+const { authMiddleware, requireAuthorizedSiteId, isMasterAdmin, getAllowedSiteIdsForUser } = require('../middleware/auth');
 
 const ML_URL = process.env.ML_SERVICE_URL || 'http://localhost:8000';
 
-// Funnel Stages
-const stages = [
-    "/product",
-    "/cart",
-    "/checkout",
-    "/payment"
-];
+// Sites list for tenant selector (master admin: all, business users: assigned only)
+router.get('/sites', authMiddleware, async (req, res) => {
+    try {
+        const tableCheck = await pool.query(`SELECT to_regclass('public.sites') AS table_name`);
+        const hasSitesTable = !!tableCheck.rows[0]?.table_name;
+
+        let allowedSiteIds = null;
+        if (!isMasterAdmin(req.user)) {
+            allowedSiteIds = await getAllowedSiteIdsForUser(req.user.id);
+            if (allowedSiteIds.length === 0) {
+                return res.json([]);
+            }
+        }
+
+        if (hasSitesTable) {
+            const sitesResult = await pool.query(
+                `
+                WITH configured_sites AS (
+                    SELECT site_id, display_name
+                    FROM sites
+                    ${allowedSiteIds ? 'WHERE site_id = ANY($1)' : ''}
+                ),
+                discovered_site_ids AS (
+                    SELECT DISTINCT site_id
+                    FROM (
+                        SELECT site_id FROM events
+                        UNION
+                        SELECT site_id FROM sessions
+                        UNION
+                        SELECT site_id FROM session_features
+                    ) all_sites
+                    WHERE site_id IS NOT NULL
+                      AND TRIM(site_id) <> ''
+                      ${allowedSiteIds ? 'AND site_id = ANY($1)' : ''}
+                      AND NOT EXISTS (
+                          SELECT 1
+                          FROM sites s
+                          WHERE s.site_id = all_sites.site_id
+                      )
+                ),
+                discovered_sites AS (
+                    SELECT
+                        site_id,
+                        INITCAP(REPLACE(site_id, '_', ' ')) AS display_name
+                    FROM discovered_site_ids
+                )
+                SELECT site_id, display_name FROM configured_sites
+                UNION ALL
+                SELECT site_id, display_name FROM discovered_sites
+                ORDER BY display_name ASC
+            `,
+                allowedSiteIds ? [allowedSiteIds] : []
+            );
+            return res.json(sitesResult.rows);
+        }
+
+        const fallbackResult = await pool.query(
+            `
+            SELECT DISTINCT site_id,
+                INITCAP(REPLACE(site_id, '_', ' ')) AS display_name
+            FROM events
+            WHERE site_id IS NOT NULL AND TRIM(site_id) <> ''
+              ${allowedSiteIds ? 'AND site_id = ANY($1)' : ''}
+            ORDER BY display_name ASC
+        `,
+            allowedSiteIds ? [allowedSiteIds] : []
+        );
+
+        return res.json(fallbackResult.rows);
+    } catch (error) {
+        console.error('Sites list error:', error);
+        return res.status(500).json({ error: 'Failed to fetch sites' });
+    }
+});
+
+// Funnel Stages — per-site configuration
+// Each stage can be an exact path or end with '/' for prefix matching (e.g. '/book/' matches '/book/101')
+const SITE_FUNNELS = {
+    ecommerce_001: ["/products", "/cart", "/checkout", "/order-complete"],
+    demo_bookstore_002: ["/book/", "/cart", "/checkout", "/order-confirmed"],
+};
+const DEFAULT_FUNNEL = ["/products", "/cart", "/checkout", "/order-complete"];
+
+function getFunnelStages(siteId) {
+    return SITE_FUNNELS[siteId] || DEFAULT_FUNNEL;
+}
+
+function matchFunnelStage(pageUrl, stages) {
+    // Normalize trailing slash from page_url for comparison
+    const norm = pageUrl.endsWith('/') ? pageUrl.slice(0, -1) : pageUrl;
+    for (let i = 0; i < stages.length; i++) {
+        const stage = stages[i];
+        if (stage.endsWith('/')) {
+            // Prefix match: '/book/' matches '/book/101', '/book/abc', etc.
+            const prefix = stage.slice(0, -1); // '/book'
+            if (norm === prefix || norm.startsWith(stage)) return i;
+        } else {
+            // Exact match (trailing-slash tolerant)
+            if (norm === stage) return i;
+        }
+    }
+    return -1;
+}
 
 // Multi-tenant: requireSiteId ensures site_id query param is present
-router.get('/funnel', authMiddleware, adminMiddleware, requireSiteId, async (req, res) => {
+router.get('/funnel', authMiddleware, requireAuthorizedSiteId, async (req, res) => {
     try {
         // Filter events by site_id for tenant isolation
         const site_id = req.siteId;
+        const stages = getFunnelStages(site_id);
 
         const result = await pool.query(`
             SELECT session_id, page_url
@@ -30,7 +127,7 @@ router.get('/funnel', authMiddleware, adminMiddleware, requireSiteId, async (req
         const sessionStages = {};
 
         result.rows.forEach(row => {
-            const stageIndex = stages.indexOf(row.page_url);
+            const stageIndex = matchFunnelStage(row.page_url, stages);
 
             if (stageIndex !== -1) {
                 if (!sessionStages[row.session_id] || stageIndex > sessionStages[row.session_id]) {
@@ -73,7 +170,7 @@ router.get('/funnel', authMiddleware, adminMiddleware, requireSiteId, async (req
 
 // Heatmap API
 // Multi-tenant: filter heatmap data by site_id
-router.get('/heatmap', authMiddleware, adminMiddleware, requireSiteId, async (req, res) => {
+router.get('/heatmap', authMiddleware, requireAuthorizedSiteId, async (req, res) => {
     try {
 
         const { page } = req.query;
@@ -83,13 +180,17 @@ router.get('/heatmap', authMiddleware, adminMiddleware, requireSiteId, async (re
             return res.status(400).json({ error: "Page query param required" });
         }
 
+        // Normalize: match with or without trailing slash so "/cart" finds "/cart/" data and vice-versa
+        const pageNorm = page.endsWith('/') ? page.slice(0, -1) : page;
+        const pageWithSlash = pageNorm + '/';
+
         const result = await pool.query(
             `SELECT x, y
              FROM events
-             WHERE event_type IN ('click', 'mousemove')
-             AND page_url = $1
+             WHERE event_type IN ('click', 'mousemove', 'mouse_move')
+             AND (page_url = $1 OR page_url = $3)
              AND site_id = $2`,
-            [page, site_id]
+            [pageNorm, site_id, pageWithSlash]
         );
 
         res.json(result.rows);
@@ -102,7 +203,7 @@ router.get('/heatmap', authMiddleware, adminMiddleware, requireSiteId, async (re
 
 
 // Multi-tenant: filter prediction lookup by site_id
-router.get('/predict/:session_id', authMiddleware, adminMiddleware, requireSiteId, async (req, res) => {
+router.get('/predict/:session_id', authMiddleware, requireAuthorizedSiteId, async (req, res) => {
     try {
         const { session_id } = req.params;
         const site_id = req.siteId;
@@ -148,7 +249,7 @@ router.get('/predict/:session_id', authMiddleware, adminMiddleware, requireSiteI
             );
         }
 
-                const mlResponse = await fetch(`${ML_URL}/predict`, {
+        const mlResponse = await fetch(`${ML_URL}/predict`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -160,7 +261,15 @@ router.get('/predict/:session_id', authMiddleware, adminMiddleware, requireSiteI
             })
         });
 
-        const prediction = await mlResponse.json();
+        const prediction = await mlResponse.json().catch(() => null);
+        if (!mlResponse.ok) {
+            const upstreamError = prediction?.error || `ML service responded with ${mlResponse.status}`;
+            return res.status(500).json({ error: `Prediction error: ${upstreamError}` });
+        }
+
+        if (!prediction || prediction.drop_off_probability === undefined) {
+            return res.status(500).json({ error: "Prediction error: Invalid response from ML service" });
+        }
 
         res.json(prediction);
 
@@ -171,25 +280,48 @@ router.get('/predict/:session_id', authMiddleware, adminMiddleware, requireSiteI
 });
 
 // Multi-tenant: filter scrollmap data by site_id
-router.get('/scrollmap', authMiddleware, adminMiddleware, requireSiteId, async (req, res) => {
+router.get('/scrollmap', authMiddleware, requireAuthorizedSiteId, async (req, res) => {
     const { page } = req.query;
     const site_id = req.siteId;
+
+    const pageNorm = page.endsWith('/') ? page.slice(0, -1) : page;
+    const pageWithSlash = pageNorm + '/';
 
     const result = await pool.query(
         `SELECT scroll_depth
          FROM events
          WHERE event_type = 'scroll'
-         AND page_url = $1
+         AND (page_url = $1 OR page_url = $3)
          AND site_id = $2`,
-        [page, site_id]
+        [pageNorm, site_id, pageWithSlash]
     );
 
     res.json(result.rows);
 });
 
+// Dynamic page list — returns distinct tracked pages for a site (for dropdown menus)
+router.get('/analytics/pages', authMiddleware, requireAuthorizedSiteId, async (req, res) => {
+    try {
+        const site_id = req.siteId;
+        const result = await pool.query(
+            `SELECT DISTINCT page_url
+             FROM events
+             WHERE site_id = $1
+               AND page_url IS NOT NULL
+               AND TRIM(page_url) <> ''
+             ORDER BY page_url ASC`,
+            [site_id]
+        );
+        res.json(result.rows.map(r => r.page_url));
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch pages' });
+    }
+});
+
 //sentiments endpoint
 // Sentiment analysis — no DB query, but requireSiteId enforces tenant context
-router.post('/sentiment', authMiddleware, adminMiddleware, requireSiteId, async (req, res) => {
+router.post('/sentiment', authMiddleware, requireAuthorizedSiteId, async (req, res) => {
     try {
 
         const { text } = req.body;
@@ -212,7 +344,7 @@ router.post('/sentiment', authMiddleware, adminMiddleware, requireSiteId, async 
 
 // Time-on-page analytics
 // Multi-tenant: filter time-on-page by site_id
-router.get('/analytics/time-on-page', authMiddleware, adminMiddleware, requireSiteId, async (req, res) => {
+router.get('/analytics/time-on-page', authMiddleware, requireAuthorizedSiteId, async (req, res) => {
     try {
         const site_id = req.siteId;
 
@@ -288,7 +420,7 @@ router.get('/analytics/time-on-page', authMiddleware, adminMiddleware, requireSi
 
 // Entry & Exit Pages
 // Multi-tenant: filter entry-exit by site_id
-router.get('/analytics/entry-exit', authMiddleware, adminMiddleware, requireSiteId, async (req, res) => {
+router.get('/analytics/entry-exit', authMiddleware, requireAuthorizedSiteId, async (req, res) => {
     try {
         const site_id = req.siteId;
 
@@ -350,7 +482,7 @@ router.get('/analytics/entry-exit', authMiddleware, adminMiddleware, requireSite
 
 // Rage Clicks
 // Multi-tenant: filter rage-clicks by site_id
-router.get('/analytics/rage-clicks', authMiddleware, adminMiddleware, requireSiteId, async (req, res) => {
+router.get('/analytics/rage-clicks', authMiddleware, requireAuthorizedSiteId, async (req, res) => {
     try {
         const { page } = req.query;
         const site_id = req.siteId;
@@ -462,7 +594,7 @@ const CUSTOMER_PAGES = ['/', '/product', '/cart', '/checkout', '/payment'];
 
 // Navigation Paths
 // Multi-tenant: filter nav-paths by site_id
-router.get('/nav-paths', authMiddleware, adminMiddleware, requireSiteId, async (req, res) => {
+router.get('/nav-paths', authMiddleware, requireAuthorizedSiteId, async (req, res) => {
     try {
         const limit = parseInt(req.query.limit, 10) || 10;
         const site_id = req.siteId;
@@ -533,7 +665,7 @@ router.get('/nav-paths', authMiddleware, adminMiddleware, requireSiteId, async (
 
 // Conversion Influence
 // Multi-tenant: filter conversion-influence by site_id
-router.get('/conversion-influence', authMiddleware, adminMiddleware, requireSiteId, async (req, res) => {
+router.get('/conversion-influence', authMiddleware, requireAuthorizedSiteId, async (req, res) => {
     try {
         const site_id = req.siteId;
 
@@ -633,7 +765,7 @@ router.get('/conversion-influence', authMiddleware, adminMiddleware, requireSite
 
 // Engagement Scores
 // Multi-tenant: filter engagement-scores by site_id
-router.get('/engagement-scores', authMiddleware, adminMiddleware, requireSiteId, async (req, res) => {
+router.get('/engagement-scores', authMiddleware, requireAuthorizedSiteId, async (req, res) => {
     try {
         const site_id = req.siteId;
 

@@ -2,19 +2,34 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Cell, ResponsiveContainer, LabelList } from 'recharts';
 import { useAuth } from '../context/AuthContext';
+import { useSite } from '../context/SiteContext';
 
 function EntryExit() {
     const { token } = useAuth();
+    const { currentSiteId, availableSites } = useSite();
     const [entryPages, setEntryPages] = useState([]);
     const [exitPages, setExitPages] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
     useEffect(() => {
-        if (!token) return;
+        if (!token || !currentSiteId) {
+            setLoading(true);
+            setError('');
+            setEntryPages([]);
+            setExitPages([]);
+            return;
+        }
 
-        fetch('http://localhost:5000/api/analytics/entry-exit?site_id=default_site', {
+        const controller = new AbortController();
+        setLoading(true);
+        setError('');
+        setEntryPages([]);
+        setExitPages([]);
+
+        fetch(`http://localhost:5000/api/analytics/entry-exit?site_id=${encodeURIComponent(currentSiteId)}`, {
             headers: { Authorization: `Bearer ${token}` },
+            signal: controller.signal,
         })
             .then(res => {
                 if (!res.ok) throw new Error(`Server error: ${res.status}`);
@@ -25,9 +40,18 @@ function EntryExit() {
                 setExitPages(data.exitPages || []);
                 setError('');
             })
-            .catch(err => setError(err.message || 'Failed to fetch entry/exit data'))
-            .finally(() => setLoading(false));
-    }, [token]);
+            .catch(err => {
+                if (err.name === 'AbortError') return;
+                setError(err.message || 'Failed to fetch entry/exit data');
+            })
+            .finally(() => {
+                if (!controller.signal.aborted) {
+                    setLoading(false);
+                }
+            });
+
+        return () => controller.abort();
+    }, [token, currentSiteId]);
 
     const highestExitRate = exitPages.length > 0
         ? exitPages.reduce((max, p) => p.exit_rate > max.exit_rate ? p : max, exitPages[0])
@@ -48,6 +72,13 @@ function EntryExit() {
                 <div>
                     <h1 style={styles.title}>Entry &amp; Exit Pages</h1>
                     <p style={styles.subtitle}>Where users start and where they leave.</p>
+                    {currentSiteId && (
+                        <div style={{ fontSize: 12, color: '#888', marginTop: 6 }}>
+                            Site: <span style={{ fontWeight: 600, color: '#64748b' }}>
+                                {availableSites.find(s => s.site_id === currentSiteId)?.display_name || currentSiteId}
+                            </span>
+                        </div>
+                    )}
                 </div>
                 <Link to="/dashboard" style={styles.backLink}>← Back to Dashboard</Link>
             </div>
@@ -55,7 +86,7 @@ function EntryExit() {
             {error && <div style={styles.error}>{error}</div>}
 
             {entryPages.length === 0 && exitPages.length === 0 && !error ? (
-                <p style={{ color: '#999', textAlign: 'center', marginTop: 40 }}>No page view data available yet.</p>
+                <p style={{ color: '#999', textAlign: 'center', marginTop: 40 }}>No sessions recorded yet for this site.</p>
             ) : (
                 <>
                     <div style={styles.chartsRow}>

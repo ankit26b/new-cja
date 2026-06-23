@@ -4,7 +4,7 @@ import "./Home.css";
 
 export default function Home() {
   const navigate = useNavigate();
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout } = useAuth();
 
   return (
     <div className="homeContainer">
@@ -18,7 +18,7 @@ export default function Home() {
           <div className="heroAuthActions">
             {user ? (
               <>
-                {isAdmin() && (
+                {user && (
                   <button className="secondaryBtn" onClick={() => navigate('/dashboard')}>
                     View Analytics
                   </button>
@@ -37,7 +37,7 @@ export default function Home() {
         <p>Experience the next generation of online shopping. Premium products, unmatched quality, and a design that feels alive.</p>
         <div className="ctaGroup">
           <button className="primary" onClick={() => navigate('/product')}>Explore Products</button>
-          {isAdmin() ? (
+          {user ? (
             <button className="secondaryBtn" onClick={() => navigate('/dashboard')}>View Analytics</button>
           ) : (
             <button className="secondaryBtn" onClick={() => navigate('/login')}>Admin Login</button>

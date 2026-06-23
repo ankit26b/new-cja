@@ -5,36 +5,58 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from 'recharts';
 import { useAuth } from '../context/AuthContext';
+import { useSite } from '../context/SiteContext';
 
 const COLORS = { highly_engaged: '#16a34a', moderately_engaged: '#f59e0b', passive: '#dc2626' };
 const STAGE_LABELS = { 0: 'Product', 1: 'Cart', 2: 'Checkout', 3: 'Payment' };
 
 export default function EngagementScores() {
   const { token } = useAuth();
+  const { currentSiteId, availableSites } = useSite();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!token) return;
+    if (!token || !currentSiteId) {
+      setLoading(true);
+      setError('');
+      setData(null);
+      return;
+    }
+
+    const controller = new AbortController();
     setLoading(true);
-    fetch('http://localhost:5000/api/engagement-scores?site_id=default_site', {
+    setError('');
+    setData(null);
+
+    fetch(`http://localhost:5000/api/engagement-scores?site_id=${encodeURIComponent(currentSiteId)}`, {
       headers: { Authorization: `Bearer ${token}` },
+      signal: controller.signal,
     })
       .then(res => {
         if (!res.ok) throw new Error(`Server error: ${res.status}`);
         return res.json();
       })
       .then(d => setData(d))
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [token]);
+      .catch(err => {
+        if (err.name === 'AbortError') return;
+        setError(err.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      });
+
+    return () => controller.abort();
+  }, [token, currentSiteId]);
 
   if (loading)
     return <div style={styles.container}><p style={{ textAlign: 'center', marginTop: 60 }}>Loading…</p></div>;
   if (error)
     return <div style={styles.container}><p style={{ color: '#dc2626', textAlign: 'center', marginTop: 60 }}>{error}</p></div>;
-  if (!data) return null;
+  if (!data) return <div style={styles.container}><p style={{ color: '#64748b', textAlign: 'center', marginTop: 60 }}>No sessions recorded yet for this site.</p></div>;
 
   const { distribution, average_score, scores_by_funnel_stage, top_sessions } = data;
 
@@ -71,6 +93,13 @@ export default function EngagementScores() {
         <div>
           <h1 style={styles.title}>Engagement Scores</h1>
           <p style={styles.subtitle}>Session-level engagement analysis across the funnel.</p>
+          {currentSiteId && (
+            <div style={{ fontSize: 12, color: '#888', marginTop: 6 }}>
+              Site: <span style={{ fontWeight: 600, color: '#64748b' }}>
+                {availableSites.find(s => s.site_id === currentSiteId)?.display_name || currentSiteId}
+              </span>
+            </div>
+          )}
         </div>
         <Link to="/dashboard" style={styles.backLink}>← Back to Dashboard</Link>
       </div>

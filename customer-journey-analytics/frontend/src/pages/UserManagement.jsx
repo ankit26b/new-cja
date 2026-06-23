@@ -5,9 +5,12 @@ import { useAuth } from '../context/AuthContext';
 function UserManagement() {
     const { token, user } = useAuth();
     const [users, setUsers] = useState([]);
+    const [sites, setSites] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [updatingUserId, setUpdatingUserId] = useState(null);
+    const [savingSitesUserId, setSavingSitesUserId] = useState(null);
+    const [siteSelections, setSiteSelections] = useState({});
 
     const fetchUsers = useCallback(async () => {
         if (!token) {
@@ -17,7 +20,7 @@ function UserManagement() {
 
         try {
             setError('');
-            const res = await fetch('http://localhost:5000/api/auth/users', {
+            const res = await fetch('http://localhost:5000/api/auth/users-with-sites', {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
@@ -29,7 +32,13 @@ function UserManagement() {
                 throw new Error(data.error || 'Failed to fetch users');
             }
 
-            setUsers(data.users || []);
+            const listedUsers = data.users || [];
+            setUsers(listedUsers);
+            const initialSelections = {};
+            listedUsers.forEach((listedUser) => {
+                initialSelections[listedUser.id] = listedUser.site_ids || [];
+            });
+            setSiteSelections(initialSelections);
         } catch (err) {
             setError(err.message || 'Failed to fetch users');
         } finally {
@@ -37,9 +46,28 @@ function UserManagement() {
         }
     }, [token]);
 
+    const fetchSites = useCallback(async () => {
+        if (!token) return;
+        try {
+            const res = await fetch('http://localhost:5000/api/sites', {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || 'Failed to fetch sites');
+            }
+            setSites(Array.isArray(data) ? data : []);
+        } catch (err) {
+            setError(err.message || 'Failed to fetch sites');
+        }
+    }, [token]);
+
     useEffect(() => {
         fetchUsers();
-    }, [fetchUsers]);
+        fetchSites();
+    }, [fetchUsers, fetchSites]);
 
     const handleRoleToggle = async (targetUser) => {
         const nextRole = targetUser.role === 'admin' ? 'user' : 'admin';
@@ -67,6 +95,43 @@ function UserManagement() {
             setError(err.message || 'Failed to update role');
         } finally {
             setUpdatingUserId(null);
+        }
+    };
+
+    const toggleSiteSelection = (userId, siteId) => {
+        setSiteSelections((prev) => {
+            const selected = prev[userId] || [];
+            const next = selected.includes(siteId)
+                ? selected.filter((id) => id !== siteId)
+                : [...selected, siteId];
+            return { ...prev, [userId]: next };
+        });
+    };
+
+    const saveSiteAssignments = async (targetUser) => {
+        setSavingSitesUserId(targetUser.id);
+        setError('');
+        try {
+            const selectedSiteIds = siteSelections[targetUser.id] || [];
+            const res = await fetch(`http://localhost:5000/api/auth/users/${targetUser.id}/sites`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ site_ids: selectedSiteIds }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || 'Failed to update site assignments');
+            }
+
+            await fetchUsers();
+        } catch (err) {
+            setError(err.message || 'Failed to update site assignments');
+        } finally {
+            setSavingSitesUserId(null);
         }
     };
 
@@ -99,6 +164,7 @@ function UserManagement() {
                                 <th style={tableHeaderStyle}>Username</th>
                                 <th style={tableHeaderStyle}>Email</th>
                                 <th style={tableHeaderStyle}>Role</th>
+                                <th style={tableHeaderStyle}>Site Access</th>
                                 <th style={tableHeaderStyle}>Action</th>
                             </tr>
                         </thead>
@@ -108,6 +174,8 @@ function UserManagement() {
                                 const username = listedUser.username || listedUser.email?.split('@')[0] || '—';
                                 const nextActionLabel = listedUser.role === 'admin' ? 'Demote to User' : 'Make Admin';
                                 const isUpdating = updatingUserId === listedUser.id;
+                                const siteAccess = siteSelections[listedUser.id] || [];
+                                const isSavingSites = savingSitesUserId === listedUser.id;
 
                                 return (
                                     <tr key={listedUser.id} style={{ borderTop: '1px solid #eee' }}>
@@ -126,6 +194,34 @@ function UserManagement() {
                                             }}>
                                                 {listedUser.role}
                                             </span>
+                                        </td>
+                                        <td style={tableCellStyle}>
+                                            {listedUser.role === 'admin' ? (
+                                                <span style={{ color: '#64748b', fontSize: 13 }}>All sites (master admin)</span>
+                                            ) : (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 220 }}>
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                                        {sites.map((site) => (
+                                                            <label key={`${listedUser.id}-${site.site_id}`} style={{ display: 'inline-flex', gap: 6, alignItems: 'center', fontSize: 13 }}>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={siteAccess.includes(site.site_id)}
+                                                                    onChange={() => toggleSiteSelection(listedUser.id, site.site_id)}
+                                                                    disabled={isSavingSites}
+                                                                />
+                                                                {site.display_name}
+                                                            </label>
+                                                        ))}
+                                                    </div>
+                                                    <button
+                                                        onClick={() => saveSiteAssignments(listedUser)}
+                                                        disabled={isSavingSites}
+                                                        style={{ ...actionButtonStyle, width: 150, opacity: isSavingSites ? 0.7 : 1 }}
+                                                    >
+                                                        {isSavingSites ? 'Saving...' : 'Save Sites'}
+                                                    </button>
+                                                </div>
+                                            )}
                                         </td>
                                         <td style={tableCellStyle}>
                                             {isCurrentUser ? (
