@@ -19,6 +19,9 @@ import RageClicks from "./pages/RageClicks";
 import NavPaths from "./pages/NavPaths";
 import ConversionInfluencer from "./pages/ConversionInfluencer";
 import EngagementScores from "./pages/EngagementScores";
+import SessionAnalytics from "./pages/SessionAnalytics";
+import RiskPrediction from "./pages/RiskPrediction";
+import SentimentInsights from "./pages/SentimentInsights";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -88,6 +91,21 @@ function App() {
         <Route path="/engagement-scores" element={
           <ProtectedRoute>
             <EngagementScores />
+          </ProtectedRoute>
+        } />
+        <Route path="/session-analytics" element={
+          <ProtectedRoute>
+            <SessionAnalytics />
+          </ProtectedRoute>
+        } />
+        <Route path="/risk-prediction" element={
+          <ProtectedRoute>
+            <RiskPrediction />
+          </ProtectedRoute>
+        } />
+        <Route path="/sentiment-insights" element={
+          <ProtectedRoute>
+            <SentimentInsights />
           </ProtectedRoute>
         } />
       </Routes>

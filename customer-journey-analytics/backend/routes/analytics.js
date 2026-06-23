@@ -878,4 +878,226 @@ router.get('/engagement-scores', authMiddleware, requireAuthorizedSiteId, async 
     }
 });
 
+// ─── Session List ─────────────────────────────────────────────────────────────
+// GET /api/analytics/sessions?site_id=X&page=1&limit=20&sort_by=timestamp&sort_dir=desc
+router.get('/analytics/sessions', authMiddleware, requireAuthorizedSiteId, async (req, res) => {
+    try {
+        const site_id = req.siteId;
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
+        const offset = (page - 1) * limit;
+
+        const ALLOWED_SORT = ['duration', 'timestamp', 'pages_visited', 'max_funnel_stage', 'scroll_depth'];
+        const sortBy = ALLOWED_SORT.includes(req.query.sort_by) ? req.query.sort_by : 'timestamp';
+        const sortDir = req.query.sort_dir === 'asc' ? 'ASC' : 'DESC';
+
+        const colMap = {
+            duration:         's.duration',
+            timestamp:        's.start_time',
+            pages_visited:    'COALESCE(sf.pages_visited, s.total_pages)',
+            max_funnel_stage: 'COALESCE(sf.max_funnel_stage, 0)',
+            scroll_depth:     'COALESCE(sf.avg_scroll_depth, s.max_scroll_depth)',
+        };
+
+        const countResult = await pool.query(
+            `SELECT COUNT(*) FROM sessions s WHERE s.site_id = $1`,
+            [site_id]
+        );
+        const total = parseInt(countResult.rows[0].count);
+
+        const result = await pool.query(`
+            SELECT
+                s.session_id,
+                s.duration,
+                s.total_clicks,
+                s.max_scroll_depth,
+                s.total_pages,
+                s.start_time,
+                COALESCE(sf.pages_visited, s.total_pages)       AS pages_visited,
+                COALESCE(sf.max_funnel_stage, 0)                AS max_funnel_stage,
+                COALESCE(sf.avg_scroll_depth, s.max_scroll_depth) AS avg_scroll_depth
+            FROM sessions s
+            LEFT JOIN session_features sf
+                ON s.session_id = sf.session_id AND sf.site_id = $1
+            WHERE s.site_id = $1
+            ORDER BY ${colMap[sortBy]} ${sortDir} NULLS LAST
+            LIMIT $2 OFFSET $3
+        `, [site_id, limit, offset]);
+
+        res.json({ sessions: result.rows, total, page, limit });
+    } catch (error) {
+        console.error('Session list error:', error);
+        res.status(500).json({ error: 'Failed to fetch sessions' });
+    }
+});
+
+// ─── Session Detail ────────────────────────────────────────────────────────────
+// GET /api/analytics/sessions/:session_id?site_id=X
+router.get('/analytics/sessions/:session_id', authMiddleware, requireAuthorizedSiteId, async (req, res) => {
+    try {
+        const { session_id } = req.params;
+        const site_id = req.siteId;
+
+        const sessionResult = await pool.query(`
+            SELECT
+                s.session_id, s.start_time, s.end_time, s.duration,
+                s.total_clicks, s.max_scroll_depth, s.total_pages, s.site_id,
+                COALESCE(sf.pages_visited, s.total_pages)       AS pages_visited,
+                COALESCE(sf.max_funnel_stage, 0)                AS max_funnel_stage,
+                COALESCE(sf.avg_scroll_depth, s.max_scroll_depth) AS avg_scroll_depth
+            FROM sessions s
+            LEFT JOIN session_features sf
+                ON s.session_id = sf.session_id AND sf.site_id = $2
+            WHERE s.session_id = $1 AND s.site_id = $2
+        `, [session_id, site_id]);
+
+        if (sessionResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Session not found' });
+        }
+
+        const eventsResult = await pool.query(`
+            SELECT event_type, page_url, x, y, scroll_depth, timestamp
+            FROM events
+            WHERE session_id = $1 AND site_id = $2
+            ORDER BY timestamp ASC
+            LIMIT 300
+        `, [session_id, site_id]);
+
+        res.json({ session: sessionResult.rows[0], events: eventsResult.rows });
+    } catch (error) {
+        console.error('Session detail error:', error);
+        res.status(500).json({ error: 'Failed to fetch session detail' });
+    }
+});
+
+// ─── Risk Distribution ─────────────────────────────────────────────────────────
+// GET /api/analytics/risk-distribution?site_id=X
+router.get('/analytics/risk-distribution', authMiddleware, requireAuthorizedSiteId, async (req, res) => {
+    try {
+        const site_id = req.siteId;
+
+        const result = await pool.query(`
+            SELECT session_id, avg_scroll_depth, session_duration,
+                   total_clicks, pages_visited, max_funnel_stage
+            FROM session_features
+            WHERE site_id = $1
+        `, [site_id]);
+
+        if (result.rows.length === 0) {
+            return res.json({
+                distribution: { high: 0, medium: 0, low: 0 },
+                sessions: [],
+                total: 0,
+            });
+        }
+
+        const sessions = result.rows;
+        const maxDuration = Math.max(...sessions.map(s => Number(s.session_duration)), 1);
+        const maxClicks   = Math.max(...sessions.map(s => Number(s.total_clicks)), 1);
+        const maxPages    = Math.max(...sessions.map(s => Number(s.pages_visited)), 1);
+
+        const scored = sessions.map(s => {
+            const normDur    = Number(s.session_duration) / maxDuration;
+            const normClicks = Number(s.total_clicks)     / maxClicks;
+            const normPages  = Number(s.pages_visited)    / maxPages;
+            const normStage  = Number(s.max_funnel_stage) / 3;
+            const normScroll = Number(s.avg_scroll_depth) / 100;
+
+            const engagement =
+                normDur * 0.28 + normPages * 0.2 + normStage * 0.24 +
+                normScroll * 0.18 + normClicks * 0.1;
+
+            const riskScore = Math.max(0.02, Math.min(0.98, 1 - engagement));
+
+            let risk_tier;
+            if (riskScore >= 0.67) risk_tier = 'high';
+            else if (riskScore >= 0.40) risk_tier = 'medium';
+            else risk_tier = 'low';
+
+            return {
+                session_id: s.session_id,
+                risk_score: Number(riskScore.toFixed(3)),
+                risk_tier,
+            };
+        });
+
+        const distribution = { high: 0, medium: 0, low: 0 };
+        scored.forEach(s => distribution[s.risk_tier]++);
+
+        const topSessions = scored
+            .sort((a, b) => b.risk_score - a.risk_score)
+            .slice(0, 100);
+
+        res.json({ distribution, sessions: topSessions, total: sessions.length });
+    } catch (error) {
+        console.error('Risk distribution error:', error);
+        res.status(500).json({ error: 'Failed to compute risk distribution' });
+    }
+});
+
+// ─── Sentiment Insights ────────────────────────────────────────────────────────
+// GET /api/analytics/sentiment-insights?site_id=X
+router.get('/analytics/sentiment-insights', authMiddleware, requireAuthorizedSiteId, async (req, res) => {
+    try {
+        const site_id = req.siteId;
+
+        const countResult = await pool.query(`
+            SELECT sentiment_label, COUNT(*)::int AS count
+            FROM feedback
+            WHERE site_id = $1 AND sentiment_label IS NOT NULL
+            GROUP BY sentiment_label
+        `, [site_id]);
+
+        if (countResult.rows.length === 0) {
+            return res.json({
+                counts: { positive: 0, neutral: 0, negative: 0 },
+                percentages: { positive: 0, neutral: 0, negative: 0 },
+                total: 0,
+                snippets: { positive: [], neutral: [], negative: [] },
+            });
+        }
+
+        const counts = { positive: 0, neutral: 0, negative: 0 };
+        let total = 0;
+        for (const row of countResult.rows) {
+            if (Object.prototype.hasOwnProperty.call(counts, row.sentiment_label)) {
+                counts[row.sentiment_label] = row.count;
+                total += row.count;
+            }
+        }
+
+        const percentages = {};
+        for (const [label, count] of Object.entries(counts)) {
+            percentages[label] = total > 0 ? Number(((count / total) * 100).toFixed(1)) : 0;
+        }
+
+        // Fetch representative snippets per category
+        const snippets = { positive: [], neutral: [], negative: [] };
+
+        for (const label of ['positive', 'neutral']) {
+            const { rows } = await pool.query(`
+                SELECT message FROM feedback
+                WHERE site_id = $1 AND sentiment_label = $2
+                ORDER BY sentiment_score DESC
+                LIMIT 3
+            `, [site_id, label]);
+            snippets[label] = rows.map(r => r.message);
+        }
+
+        // Negative: lowest sentiment scores are the most negative
+        const { rows: negRows } = await pool.query(`
+            SELECT message FROM feedback
+            WHERE site_id = $1 AND sentiment_label = 'negative'
+            ORDER BY sentiment_score ASC
+            LIMIT 3
+        `, [site_id]);
+        snippets.negative = negRows.map(r => r.message);
+
+        res.json({ counts, percentages, total, snippets });
+    } catch (error) {
+        console.error('Sentiment insights error:', error);
+        res.status(500).json({ error: 'Failed to fetch sentiment insights' });
+    }
+});
+
 module.exports = router;

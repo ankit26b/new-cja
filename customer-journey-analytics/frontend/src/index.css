@@ -114,3 +114,47 @@ button:focus-visible {
   background-color: var(--accent);
   color: white;
 }
+
+/* ── Panel skeleton shimmer ──────────────────────────────────────────── */
+@keyframes cja-shimmer {
+  0%   { background-position: -600px 0; }
+  100% { background-position: 600px 0; }
+}
+
+.cja-skeleton {
+  background: linear-gradient(
+    90deg,
+    #e2e8f0 25%,
+    #f1f5f9 50%,
+    #e2e8f0 75%
+  );
+  background-size: 1200px 100%;
+  animation: cja-shimmer 1.6s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+.cja-panel-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  color: #dc2626;
+  font-size: 14px;
+  font-weight: 500;
+  margin: 8px 0;
+}
+
+.cja-panel-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  color: #94a3b8;
+  font-size: 15px;
+  text-align: center;
+  gap: 8px;
+}
