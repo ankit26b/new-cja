@@ -1,13 +1,8 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import PageTracker from "./PageTracker";
 import Heatmap from "./pages/Heatmap";
 import ScrollHeatmap from "./pages/ScrollHeatmap";
 
-import Home from "./pages/Home";
-import Product from "./pages/Product";
-import Cart from "./pages/Cart";
-import Checkout from "./pages/Checkout";
-import Payment from "./pages/Payment";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -30,12 +25,9 @@ function App() {
       <PageTracker />
 
       <Routes>
-        {/* Public Store Routes */}
-        <Route path="/" element={<Home />} />
-        <Route path="/product" element={<Product />} />
-        <Route path="/cart" element={<Cart />} />
-        <Route path="/checkout" element={<Checkout />} />
-        <Route path="/payment" element={<Payment />} />
+        {/* Root redirects to dashboard */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
 
         {/* Auth Routes */}
         <Route path="/login" element={<Login />} />

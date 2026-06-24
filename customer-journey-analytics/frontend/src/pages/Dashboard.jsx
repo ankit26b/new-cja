@@ -124,6 +124,7 @@ export default function Dashboard() {
       <div style={S.toolStrip}>
         {MORE_TOOLS.map(t => <Link key={t.to} to={t.to} style={S.toolChip}>{t.label}</Link>)}
         <Link to="/users" style={{ ...S.toolChip, color:'#94a3b8' }}>Manage Users</Link>
+        <a href="http://localhost:3000" target="_blank" rel="noreferrer" style={{ ...S.toolChip, color:'#16a34a', marginLeft:'auto', textDecoration:'none' }}>🛍️ Visit Store ↗</a>
       </div>
 
       {/* Primary panel nav cards */}

@@ -1,10 +1,8 @@
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
 import "./Home.css";
 
 export default function Home() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
 
   return (
     <div className="homeContainer">
@@ -13,35 +11,31 @@ export default function Home() {
         <div className="heroBackground"></div>
         <div className="heroTopBar">
           <div className="heroAuthStatus">
-            {user ? `Signed in as ${user.email}` : 'Browse the store or sign in'}
+            Aesthetic Store — tracked by CJA
           </div>
           <div className="heroAuthActions">
-            {user ? (
-              <>
-                {user && (
-                  <button className="secondaryBtn" onClick={() => navigate('/dashboard')}>
-                    View Analytics
-                  </button>
-                )}
-                <button className="secondaryBtn" onClick={logout}>Logout</button>
-              </>
-            ) : (
-              <>
-                <button className="secondaryBtn" onClick={() => navigate('/login')}>Login</button>
-                <button className="secondaryBtn" onClick={() => navigate('/register')}>Register</button>
-              </>
-            )}
+            <a
+              className="secondaryBtn"
+              href="http://localhost:5173/dashboard"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Analytics Dashboard ↗
+            </a>
           </div>
         </div>
         <h1 className="glowText">Aesthetic Store</h1>
         <p>Experience the next generation of online shopping. Premium products, unmatched quality, and a design that feels alive.</p>
         <div className="ctaGroup">
-          <button className="primary" onClick={() => navigate('/store/product')}>Explore Products</button>
-          {user ? (
-            <button className="secondaryBtn" onClick={() => navigate('/dashboard')}>View Analytics</button>
-          ) : (
-            <button className="secondaryBtn" onClick={() => navigate('/login')}>Admin Login</button>
-          )}
+          <button className="primary" onClick={() => navigate('/product')}>Explore Products</button>
+          <a
+            className="secondaryBtn"
+            href="http://localhost:5173/dashboard"
+            target="_blank"
+            rel="noreferrer"
+          >
+            View Analytics ↗
+          </a>
         </div>
       </section>
 
@@ -80,7 +74,7 @@ export default function Home() {
                   <p>A perfect blend of comfort and street style. Made with 100% organic cotton.</p>
                   <div className="productFooter">
                     <span className="price">${89 + item * 10}.00</span>
-                    <button className="primary" onClick={() => navigate('/store/product')}>Buy Now</button>
+                    <button className="primary" onClick={() => navigate('/product')}>Buy Now</button>
                   </div>
                 </div>
               </div>
@@ -107,7 +101,15 @@ export default function Home() {
         <div className="scrollItem">
           <h3>Deep Engagement Zone</h3>
           <p>If you're reading this, your session duration is probably over 30 seconds and your scroll depth is near 90%. You're highly engaged!</p>
-          <button className="primary" style={{marginTop: '1rem'}} onClick={() => navigate('/scroll-heatmap')}>View Scroll Heatmap</button>
+          <a
+            className="primary"
+            style={{ display:'inline-block', marginTop:'1rem', padding:'0.8em 1.6em', borderRadius:'var(--radius-md)', background:'var(--gradient-primary)', color:'white', fontWeight:600 }}
+            href="http://localhost:5173/scroll-heatmap"
+            target="_blank"
+            rel="noreferrer"
+          >
+            View Scroll Heatmap ↗
+          </a>
         </div>
       </section>
     </div>

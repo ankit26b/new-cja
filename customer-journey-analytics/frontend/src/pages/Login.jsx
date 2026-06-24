@@ -70,7 +70,7 @@ function Login() {
                 </p>
                 
                 <p className="back-link">
-                    <Link to="/">← Back to Store</Link>
+                    <Link to="/store">← Back to Store</Link>
                 </p>
             </div>
         </div>

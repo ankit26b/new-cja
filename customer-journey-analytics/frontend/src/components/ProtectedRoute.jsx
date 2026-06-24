@@ -22,7 +22,7 @@ function ProtectedRoute({ children, adminOnly = false }) {
     }
 
     if (adminOnly && !isMasterAdmin()) {
-        return <Navigate to="/" replace />;
+        return <Navigate to="/dashboard" replace />;
     }
 
     return children;

@@ -7,17 +7,11 @@ export default function Payment() {
   const [total, setTotal] = useState(0);
 
   useEffect(() => {
-    // Determine the final total cost from the state that existed before checkout
-    // If arriving directly, default to 0
     const items = JSON.parse(localStorage.getItem("cart")) || [];
     const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
     const tax = subtotal * 0.08;
     setTotal(subtotal + tax);
-
-    // Empty the cart conceptually simulating a successfully completed order
     localStorage.removeItem("cart");
-
-    // Scroll to top immediately to ensure animations trigger in viewport
     window.scrollTo(0, 0);
   }, []);
 
@@ -53,10 +47,16 @@ export default function Payment() {
         </div>
 
         <div className="actionGroup">
-          <button className="secondaryBtn" onClick={() => navigate('/dashboard')}>
-            View Dashboard
-          </button>
-          <button className="primary" onClick={() => navigate('/store')}>
+          <a
+            className="secondaryBtn"
+            href="http://localhost:5173/dashboard"
+            target="_blank"
+            rel="noreferrer"
+            style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'1.2rem', fontSize:'1.15rem', flex:1, borderRadius:'var(--radius-md)', border:'1px solid var(--border)', color:'var(--text-primary)', fontWeight:600, textDecoration:'none' }}
+          >
+            View Dashboard ↗
+          </a>
+          <button className="primary" onClick={() => navigate('/')}>
             Return Home
           </button>
         </div>

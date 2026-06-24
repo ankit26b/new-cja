@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import "./Cart.css";
 
 export default function Cart() {
@@ -41,7 +41,7 @@ export default function Cart() {
         <div className="emptyCart">
           <h2>Your cart is empty</h2>
           <p>Discover our latest premium products.</p>
-          <button className="primary" style={{marginTop: "2rem"}} onClick={() => navigate('/store/product')}>
+          <button className="primary" style={{marginTop: "2rem"}} onClick={() => navigate('/product')}>
             Start Shopping
           </button>
         </div>
@@ -78,14 +78,13 @@ export default function Cart() {
                <span>Total</span>
                <span>${subtotal.toFixed(2)}</span>
              </div>
-             <button className="primary checkoutBtn" onClick={() => navigate('/store/checkout')}>
+             <button className="primary checkoutBtn" onClick={() => navigate('/checkout')}>
                Proceed to Checkout
              </button>
           </div>
         </>
       )}
 
-      {/* Padding space to simulate scroll depth tracking if needed */}
       <div style={{height: "300px"}} />
     </div>
   );

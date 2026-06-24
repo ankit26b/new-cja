@@ -48,6 +48,24 @@ services:
     depends_on:
       - backend
 
+  # ───── Ecommerce Store (React/Vite, port 3000) ─────
+  ecommerce-store:
+    build: ./ecommerce-store
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+  # ───── Demo Bookstore (Static HTML, nginx) ─────
+  demo-bookstore:
+    build: ./demo-bookstore
+    restart: unless-stopped
+    ports:
+      - "3001:80"
+    depends_on:
+      - backend
+
   # ───── ML Models (FastAPI) ─────
   ml-models:
     build: ./ml-models

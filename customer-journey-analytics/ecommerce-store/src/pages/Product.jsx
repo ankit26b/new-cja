@@ -56,7 +56,7 @@ export default function Product() {
             <button className="primary cartBtn" onClick={handleAddToCart}>
               {addedMessage || "Add to Cart"}
             </button>
-            <Link to="/store/cart" className="secondaryLink">View Cart</Link>
+            <Link to="/cart" className="secondaryLink">View Cart</Link>
           </div>
 
           <div className="productSpecs">
@@ -76,7 +76,7 @@ export default function Product() {
         </div>
       </div>
 
-      {/* Long Scroll Section for Reviews (Tests Journey Analytics) */}
+      {/* Long Scroll Section for Reviews */}
       <div className="reviewsSection">
         <h2>Customer Reviews</h2>
         <p>Keep scrolling to read what our community has to say. (This extended height helps test scroll map tracking)</p>
@@ -98,7 +98,7 @@ export default function Product() {
 
         <div className="reviewItem" style={{marginTop: '400px'}}>
           <h5>⭐⭐⭐⭐⭐ - "Worth every penny"</h5>
-          <p>I just kept scrolling and scrolling and the battery never died! A true testament to the 40hr lifespan.</p>
+          <p>These are the best headphones I've ever owned. Period. The build quality is exceptional.</p>
         </div>
       </div>
     </div>

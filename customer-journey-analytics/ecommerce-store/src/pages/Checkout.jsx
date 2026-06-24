@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import "./Checkout.css";
 
@@ -77,13 +77,13 @@ export default function Checkout() {
             </div>
             <div className="summaryItem">
               <span>Taxes</span>
-              <span>${(cartTotal * 0.08).toFixed(2)}</span> {/* Assuming 8% tax */}
+              <span>${(cartTotal * 0.08).toFixed(2)}</span>
             </div>
             <div className="summaryTotal">
               <span>Total</span>
               <span>${(cartTotal + (cartTotal * 0.08)).toFixed(2)}</span>
             </div>
-            <button className="primary proceedBtn" onClick={() => navigate('/store/payment')}>
+            <button className="primary proceedBtn" onClick={() => navigate('/payment')}>
               Continue to Payment
             </button>
           </div>

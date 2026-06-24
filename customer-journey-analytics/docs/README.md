@@ -41,7 +41,9 @@ That's it! All four services will start:
 
 | Service | URL |
 |---------|-----|
-| **Frontend** | http://localhost:5173 |
+| **Frontend (Dashboard)** | http://localhost:5173 |
+| **Ecommerce Store** | http://localhost:3000 |
+| **Demo Bookstore** | http://localhost:3001 |
 | **Backend API** | http://localhost:5000 |
 | **ML API** | http://localhost:8000 |
 | **PostgreSQL** | localhost:5432 |
@@ -270,13 +272,14 @@ The ML API will run at **http://localhost:8000**.
 
 ### 5. Running All Services Together (Manual)
 
-You need **three terminals** running simultaneously:
+You need **four terminals** running simultaneously:
 
 | Terminal | Directory | Command |
 |----------|-----------|---------|
 | 1 | `backend/` | `npm run dev` |
 | 2 | `frontend/` | `npm run dev` |
 | 3 | `ml-models/` | `python run.py` |
+| 4 | `ecommerce-store/` | `npm run dev` |
 
 ---
 
