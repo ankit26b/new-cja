@@ -2,6 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Aesthetic Store</title>
     <!-- CJA Tracking Config -->
@@ -10,9 +11,10 @@
         site_id: "ecommerce_001",
         track_endpoint: "http://localhost:5000/api/track",
         funnel: ["/product", "/cart", "/checkout", "/payment"],
-        debug: false
+        debug: true
       };
     </script>
+    <script src="/tracker.js"></script>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

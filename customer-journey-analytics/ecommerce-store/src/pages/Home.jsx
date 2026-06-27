@@ -13,29 +13,12 @@ export default function Home() {
           <div className="heroAuthStatus">
             Aesthetic Store — tracked by CJA
           </div>
-          <div className="heroAuthActions">
-            <a
-              className="secondaryBtn"
-              href="http://localhost:5173/dashboard"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Analytics Dashboard ↗
-            </a>
-          </div>
+
         </div>
         <h1 className="glowText">Aesthetic Store</h1>
         <p>Experience the next generation of online shopping. Premium products, unmatched quality, and a design that feels alive.</p>
         <div className="ctaGroup">
           <button className="primary" onClick={() => navigate('/product')}>Explore Products</button>
-          <a
-            className="secondaryBtn"
-            href="http://localhost:5173/dashboard"
-            target="_blank"
-            rel="noreferrer"
-          >
-            View Analytics ↗
-          </a>
         </div>
       </section>
 
