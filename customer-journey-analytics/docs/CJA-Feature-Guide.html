@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Journey Analytics — Feature Guide</title>
+<style>
+  :root {
+    --ink: #1a2233;
+    --muted: #5b6678;
+    --brand: #2b50d6;
+    --brand-soft: #eef2ff;
+    --green: #1f9d57;
+    --green-soft: #e8f8ef;
+    --amber: #b9770a;
+    --amber-soft: #fdf4e3;
+    --line: #dde3ee;
+    --code-bg: #f5f7fb;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    line-height: 1.55;
+    margin: 0;
+    font-size: 13px;
+  }
+  .page {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 38px 46px;
+  }
+  h1, h2, h3, h4 { line-height: 1.25; color: var(--ink); }
+  h2 {
+    font-size: 21px;
+    margin: 0 0 4px;
+    padding-bottom: 8px;
+    border-bottom: 3px solid var(--brand);
+  }
+  h3 {
+    font-size: 16px;
+    margin: 22px 0 6px;
+    color: var(--brand);
+  }
+  h4 { font-size: 13.5px; margin: 14px 0 4px; }
+  p { margin: 6px 0; }
+  ul, ol { margin: 6px 0 6px 18px; padding: 0; }
+  li { margin: 3px 0; }
+  code {
+    font-family: "Cascadia Code", "Consolas", monospace;
+    background: var(--code-bg);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 11.5px;
+    color: #344;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--brand);
+    border-radius: 6px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    font-size: 11px;
+    font-family: "Cascadia Code", "Consolas", monospace;
+    line-height: 1.45;
+  }
+  .muted { color: var(--muted); }
+  .lead { font-size: 14px; color: var(--muted); }
+
+  /* Cover */
+  .cover {
+    min-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    page-break-after: always;
+  }
+  .cover .kicker {
+    color: var(--brand);
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-size: 12px;
+  }
+  .cover h1 { font-size: 40px; margin: 10px 0 6px; }
+  .cover .sub { font-size: 17px; color: var(--muted); max-width: 600px; }
+  .cover .meta {
+    margin-top: 30px;
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+    color: var(--muted);
+    font-size: 12.5px;
+  }
+  .stack-badges { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .badge {
+    background: var(--brand-soft);
+    color: var(--brand);
+    border: 1px solid #c9d4f7;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 11.5px;
+    font-weight: 600;
+  }
+
+  /* Feature card */
+  .feature {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin: 16px 0;
+    page-break-inside: avoid;
+    background: #fff;
+  }
+  .feature h3 { margin-top: 0; display: flex; align-items: center; gap: 8px; }
+  .feature .tag {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    background: var(--brand-soft);
+    color: var(--brand);
+    border-radius: 4px;
+    padding: 2px 7px;
+  }
+  .row { display: grid; grid-template-columns: 90px 1fr; gap: 4px 12px; margin-top: 8px; }
+  .row dt { font-weight: 700; color: var(--ink); font-size: 12px; }
+  .row dd { margin: 0; color: #36405a; }
+
+  .impact {
+    background: var(--green-soft);
+    border-left: 3px solid var(--green);
+    border-radius: 0 6px 6px 0;
+    padding: 7px 12px;
+    margin-top: 10px;
+    font-size: 12px;
+  }
+  .impact b { color: var(--green); }
+
+  .note {
+    background: var(--amber-soft);
+    border-left: 3px solid var(--amber);
+    border-radius: 0 6px 6px 0;
+    padding: 7px 12px;
+    margin-top: 10px;
+    font-size: 12px;
+  }
+
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 12px; }
+  th, td { border: 1px solid var(--line); padding: 6px 9px; text-align: left; vertical-align: top; }
+  th { background: var(--brand-soft); color: var(--ink); font-weight: 700; }
+  tr:nth-child(even) td { background: #fafbfe; }
+
+  .section { page-break-before: always; padding-top: 6px; }
+  .toc ol { counter-reset: item; list-style: none; margin-left: 0; }
+  .toc li { padding: 3px 0; border-bottom: 1px dotted var(--line); }
+  .toc a { color: var(--ink); text-decoration: none; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .pill { display:inline-block; background:#eef; border-radius:5px; padding:1px 6px; font-size:11px; color:var(--brand); font-family:"Consolas",monospace;}
+  footer { margin-top: 26px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; text-align:center;}
+  @page { margin: 14mm; }
+</style>
+</head>
+<body>
+
+<!-- ───────────────── COVER ───────────────── -->
+<div class="page cover">
+  <div class="kicker">Product &amp; Engineering Walkthrough</div>
+  <h1>Customer Journey Analytics</h1>
+  <div class="sub">A full-stack, multi-tenant platform that captures real user behaviour, visualises the conversion journey, and uses machine learning to predict drop-off and read customer sentiment.</div>
+  <div class="stack-badges">
+    <span class="badge">React + Vite</span>
+    <span class="badge">Node.js / Express</span>
+    <span class="badge">PostgreSQL</span>
+    <span class="badge">FastAPI</span>
+    <span class="badge">XGBoost</span>
+    <span class="badge">BERT (Transformers)</span>
+    <span class="badge">Docker Compose</span>
+  </div>
+  <div class="meta">
+    <strong>Feature Guide for the team presentation</strong><br>
+    Every capability explained: what it does, how it works under the hood, and why it matters.
+  </div>
+</div>
+
+<!-- ───────────────── TOC ───────────────── -->
+<div class="page section">
+  <h2>Contents</h2>
+  <div class="toc">
+    <ol>
+      <li><a href="#overview">1 &nbsp; System Overview &amp; Architecture</a></li>
+      <li><a href="#datamodel">2 &nbsp; Data Model</a></li>
+      <li><a href="#tracking">3 &nbsp; Tracking SDK &amp; Event Ingestion</a></li>
+      <li><a href="#tenancy">4 &nbsp; Multi-Tenancy &amp; Site Isolation</a></li>
+      <li><a href="#auth">5 &nbsp; Authentication, Roles &amp; User Management</a></li>
+      <li><a href="#funnel">6 &nbsp; Conversion Funnel</a></li>
+      <li><a href="#heatmap">7 &nbsp; Click &amp; Movement Heatmap</a></li>
+      <li><a href="#scroll">8 &nbsp; Scroll-Depth Heatmap</a></li>
+      <li><a href="#time">9 &nbsp; Time-on-Page Analytics</a></li>
+      <li><a href="#entryexit">10 &nbsp; Entry &amp; Exit Pages</a></li>
+      <li><a href="#rage">11 &nbsp; Rage-Click Detection</a></li>
+      <li><a href="#navpaths">12 &nbsp; Navigation Paths</a></li>
+      <li><a href="#conv">13 &nbsp; Conversion Influence</a></li>
+      <li><a href="#engagement">14 &nbsp; Engagement Scoring</a></li>
+      <li><a href="#sessions">15 &nbsp; Session Analytics (List &amp; Detail)</a></li>
+      <li><a href="#risk">16 &nbsp; Drop-off Risk Prediction (ML)</a></li>
+      <li><a href="#riskdist">17 &nbsp; Risk Distribution</a></li>
+      <li><a href="#sentiment">18 &nbsp; Sentiment Analysis &amp; Insights</a></li>
+      <li><a href="#mltrain">19 &nbsp; ML Training Pipeline</a></li>
+      <li><a href="#deploy">20 &nbsp; Deployment &amp; Tech Stack</a></li>
+    </ol>
+  </div>
+</div>
+
+<!-- ───────────────── 1. OVERVIEW ───────────────── -->
+<div class="page section" id="overview">
+  <h2>1 &nbsp; System Overview &amp; Architecture</h2>
+  <p class="lead">CJA is split into five cooperating services that you can run with a single <code>docker compose up</code>.</p>
+
+  <table>
+    <tr><th>Service</th><th>Tech</th><th>Port</th><th>Responsibility</th></tr>
+    <tr><td>Dashboard (Frontend)</td><td>React + Vite</td><td>5173</td><td>The analyst-facing UI: charts, heatmaps, session explorer, admin screens.</td></tr>
+    <tr><td>Backend API</td><td>Node.js / Express</td><td>5000</td><td>Auth, tenant isolation, event ingestion, and all analytics computation.</td></tr>
+    <tr><td>ML Service</td><td>FastAPI (Python)</td><td>8000</td><td>Drop-off prediction (XGBoost) and sentiment analysis (BERT).</td></tr>
+    <tr><td>PostgreSQL</td><td>Postgres 16</td><td>5432</td><td>Stores sessions, events, features, users, sites, feedback.</td></tr>
+    <tr><td>Demo Stores</td><td>React + static HTML</td><td>3000 / 3001</td><td>Two sample shops that emit real tracking data into the platform.</td></tr>
+  </table>
+
+  <h3>How the pieces talk to each other</h3>
+  <ol>
+    <li>A visitor browses a demo store. The embedded <strong>tracker.js</strong> SDK captures clicks, scrolls, mouse moves, and page views.</li>
+    <li>Events are batched and POSTed to the backend <span class="pill">/api/track</span>, tagged with a <code>site_id</code>.</li>
+    <li>The backend writes raw events into PostgreSQL and incrementally maintains per-session aggregates.</li>
+    <li>An analyst logs into the dashboard. Each panel calls a scoped analytics endpoint that only returns data for sites the user is allowed to see.</li>
+    <li>For ML panels, the backend forwards features to the FastAPI service, which returns a drop-off probability or a sentiment label.</li>
+  </ol>
+
+  <h3>Design principles</h3>
+  <ul>
+    <li><strong>Multi-tenant from the ground up</strong> — every table, query, and API call is scoped by <code>site_id</code>.</li>
+    <li><strong>Computation lives in the API layer</strong> — most analytics are derived on-the-fly from raw events, so no nightly ETL is required for the demo.</li>
+    <li><strong>Resilient client SDK</strong> — the tracker wraps everything in try/catch and uses <code>sendBeacon</code> so it never breaks the host site.</li>
+    <li><strong>ML as a separate service</strong> — heavy Python dependencies are isolated, keeping the Node API lightweight.</li>
+  </ul>
+</div>
+
+<!-- ───────────────── 2. DATA MODEL ───────────────── -->
+<div class="page section" id="datamodel">
+  <h2>2 &nbsp; Data Model</h2>
+  <p>Six tables underpin the whole system. Note how <code>site_id</code> appears on every behavioural table to enforce tenant isolation.</p>
+
+  <table>
+    <tr><th>Table</th><th>Key columns</th><th>Purpose</th></tr>
+    <tr><td><code>users</code></td><td>id, email, password (bcrypt), role</td><td>Dashboard accounts. Role is <code>admin</code> or <code>user</code>.</td></tr>
+    <tr><td><code>sites</code></td><td>site_id, display_name</td><td>Registry of tenants (e.g. <code>ecommerce_001</code>, <code>demo_bookstore_002</code>).</td></tr>
+    <tr><td><code>user_sites</code></td><td>user_id, site_id</td><td>Join table — which non-admin users may view which sites.</td></tr>
+    <tr><td><code>sessions</code></td><td>session_id, site_id, duration, total_clicks, max_scroll_depth, total_pages</td><td>One row per visit, with running aggregates maintained on each event.</td></tr>
+    <tr><td><code>events</code></td><td>session_id, event_type, x, y, page_url, scroll_depth, site_id, timestamp</td><td>The raw behavioural stream — clicks, scrolls, mouse moves, page views.</td></tr>
+    <tr><td><code>session_features</code></td><td>session_id, avg_scroll_depth, session_duration, total_clicks, pages_visited, max_funnel_stage</td><td>Pre-computed ML/scoring features per session.</td></tr>
+    <tr><td><code>feedback</code></td><td>site_id, message, sentiment_label, sentiment_score</td><td>Customer messages plus their analysed sentiment.</td></tr>
+  </table>
+
+  <h3>Aggregates are maintained live</h3>
+  <p>When an event arrives, the ingestion handler upserts the session and then conditionally updates counters in the same request:</p>
+  <pre>// click  → total_clicks + 1
+// scroll → max_scroll_depth = GREATEST(current, new)
+// page_view → total_pages + 1
+// always → end_time = NOW(), duration = end_time - start_time</pre>
+  <div class="impact"><b>Impact:</b> dashboards stay fast because per-session metrics are already summarised — no expensive scans at read time for the common counters.</div>
+</div>
+
+<!-- ───────────────── 3. TRACKING SDK ───────────────── -->
+<div class="page section" id="tracking">
+  <h2>3 &nbsp; Tracking SDK &amp; Event Ingestion</h2>
+
+  <div class="feature">
+    <h3><span class="tag">SDK</span> tracker.js — the universal collector</h3>
+    <dl class="row">
+      <dt>What it does</dt>
+      <dd>A dependency-free JavaScript snippet you drop onto any website. It auto-starts on page load and silently records how visitors interact with the page.</dd>
+      <dt>How it works</dt>
+      <dd>
+        Reads config from <code>window.CJA_CONFIG</code> (<code>site_id</code>, <code>track_endpoint</code>, <code>funnel</code>). It then:
+        <ul>
+          <li>Creates a stable <strong>session id</strong> with <code>crypto.randomUUID()</code>, persisted in <code>sessionStorage</code>.</li>
+          <li>Attaches passive listeners for <strong>click, scroll, mousemove</strong> and page views.</li>
+          <li><strong>Throttles &amp; debounces</strong> noisy events (scroll every 1s, mouse moves debounced 200ms) to limit volume.</li>
+          <li>Detects <strong>funnel stages</strong> by matching the path against the configured funnel (supports prefix matching like <code>/book/</code>).</li>
+          <li>Tracks <strong>SPA route changes</strong> by patching <code>history.pushState</code>/<code>replaceState</code> and listening to <code>popstate</code>.</li>
+        </ul>
+      </dd>
+      <dt>Reliability</dt>
+      <dd>Events are <strong>batched</strong> (max 10, or every 3s) and flushed on page exit using <code>navigator.sendBeacon</code> / <code>fetch keepalive</code>, so data isn't lost when the tab closes. Every handler is wrapped in try/catch and a no-op logger, so the tracker can never crash the host page.</dd>
+    </dl>
+    <div class="impact"><b>Impact:</b> a single <code>&lt;script&gt;</code> tag turns any site into a fully instrumented data source, without performance or stability risk.</div>
+  </div>
+
+  <div class="feature">
+    <h3><span class="tag">API</span> POST /api/track — ingestion endpoint</h3>
+    <dl class="row">
+      <dt>What it does</dt>
+      <dd>Receives one event or a batch of events from the SDK and persists them.</dd>
+      <dt>How it works</dt>
+      <dd>The <code>requireSiteId</code> middleware validates and normalises the <code>site_id</code> first. Each event is sanitised (floats rounded to integers for pixel columns), the session is upserted with <code>ON CONFLICT DO NOTHING</code>, the raw event is inserted, and the relevant session aggregate is bumped — all scoped to the tenant.</dd>
+    </dl>
+    <div class="impact"><b>Impact:</b> a single, robust write path keeps raw fidelity (for heatmaps) <em>and</em> rolled-up metrics (for speed) in sync.</div>
+  </div>
+</div>
+
+<!-- ───────────────── 4. TENANCY ───────────────── -->
+<div class="page section" id="tenancy">
+  <h2>4 &nbsp; Multi-Tenancy &amp; Site Isolation</h2>
+  <div class="feature">
+    <h3><span class="tag">Security</span> Per-site data isolation</h3>
+    <dl class="row">
+      <dt>What it does</dt>
+      <dd>Guarantees that data from one website (tenant) can never leak into another's reports, and that each analyst only sees the sites they're authorised for.</dd>
+      <dt>How it works</dt>
+      <dd>
+        <ul>
+          <li>Every analytics route is guarded by <code>requireAuthorizedSiteId</code>, which (a) requires a <code>site_id</code> param, (b) lets a master admin see any site, and (c) for normal users checks the requested site against their <code>user_sites</code> rows — returning <strong>403</strong> if not permitted.</li>
+          <li>Every SQL query filters by <code>site_id</code>, so isolation is enforced at the data layer, not just the UI.</li>
+          <li>The <span class="pill">/api/sites</span> endpoint returns only the sites the caller may view, powering the dashboard's site switcher.</li>
+        </ul>
+      </dd>
+    </dl>
+    <div class="impact"><b>Impact:</b> the same deployment can safely serve many clients/brands — a core requirement for a real SaaS analytics product.</div>
+  </div>
+</div>
+
+<!-- ───────────────── 5. AUTH ───────────────── -->
+<div class="page section" id="auth">
+  <h2>5 &nbsp; Authentication, Roles &amp; User Management</h2>
+
+  <div class="feature">
+    <h3><span class="tag">Auth</span> JWT login, register &amp; first-run admin setup</h3>
+    <dl class="row">
+      <dt>What it does</dt>
+      <dd>Secures the dashboard with email/password accounts and signed tokens.</dd>
+      <dt>How it works</dt>
+      <dd>Passwords are hashed with <strong>bcrypt</strong>. On login a <strong>JWT</strong> (24h expiry) carrying <code>id</code>, <code>email</code>, and <code>role</code> is issued. The <code>authMiddleware</code> verifies the <code>Bearer</code> token on every protected route. A one-time <span class="pill">/setup-admin</span> route bootstraps the very first admin only when none exists.</dd>
+    </dl>
+  </div>
+
+  <div class="feature">
+    <h3><span class="tag">RBAC</span> Roles &amp; site assignment</h3>
+    <dl class="row">
+      <dt>What it does</dt>
+      <dd>Separates <strong>master admins</strong> (see everything, manage users) from <strong>business users</strong> (see only assigned sites).</dd>
+      <dt>How it works</dt>
+      <dd>Admin-only endpoints (guarded by <code>adminMiddleware</code>) let an admin list users with their site access, promote/demote roles, and replace a user's assigned sites. Site reassignment runs in a DB <strong>transaction</strong> (delete + re-insert) and validates that every target site exists.</dd>
+    </dl>
+    <div class="impact"><b>Impact:</b> clean least-privilege access control — clients only ever see their own data, while your team retains full oversight.</div>
+  </div>
+</div>
+
+<!-- ───────────────── 6. FUNNEL ───────────────── -->
+<div class="page section" id="funnel">
+  <h2>6 &nbsp; Conversion Funnel</h2>
+  <div class="feature">
+    <h3><span class="tag">Analytics</span> GET /api/funnel</h3>
+    <dl class="row">
+      <dt>What it does</dt>
+      <dd>Shows how many visitors reach each stage of the purchase journey (e.g. Products → Cart → Checkout → Order Complete) and the step-by-step conversion rate.</dd>
+      <dt>How it works</dt>
+      <dd>Each site has a configured funnel (<code>SITE_FUNNELS</code>) supporting exact and prefix matches. The endpoint pulls all <code>page_view</code> events, finds the <strong>furthest stage</strong> each session reached, then counts sessions cumulatively per stage. Conversion rate for a stage = users at that stage ÷ users at the previous stage.</dd>
+    </dl>
+    <div class="impact"><b>Impact:</b> instantly pinpoints <em>where</em> the biggest leaks are — the single most actionable view for boosting revenue.</div>
+  </div>
+</div>
+
+<!-- ───────────────── 7. HEATMAP ───────────────── -->
+<div class="page section" id="heatmap">
+  <h2>7 &nbsp; Click &amp; Movement Heatmap</h2>
+  <div class="feature">
+    <h3><span class="tag">Analytics</span> GET /api/heatmap?page=…</h3>
+    <dl class="row">
+      <dt>What it does</dt>
+      <dd>Renders where users click and move their mouse on a specific page, overlaid as a heat cloud.</dd>
+      <dt>How it works</dt>
+      <dd>Returns the raw <code>x, y</code> coordinates of all <code>click</code> and <code>mousemove</code> events for the given page (and site). Page matching is trailing-slash tolerant so <code>/cart</code> and <code>/cart/</code> are treated as one. The frontend renders the density visualisation.</dd>
+    </dl>
+    <div class="impact"><b>Impact:</b> reveals what actually draws attention vs. what's ignored, guiding layout and call-to-action placement.</div>
+  </div>
+</div>
+
+<!-- ───────────────── 8. SCROLL ───────────────── -->
+<div class="page section" id="scroll">
+  <h2>8 &nbsp; Scroll-Depth Heatmap</h2>
+  <div class="feature">
+    <h3><span class="tag">Analytics</span> GET /api/scrollmap?page=…</h3>
+    <dl class="row">
+      <dt>What it does</dt>
+      <dd>Shows how far down a page visitors actually scroll.</dd>
+      <dt>How it works</dt>
+      <dd>Collects the <code>scroll_depth</code> percentage from all <code>scroll</code> events for the page. The distribution reveals the point where most users stop reading.</dd>
+    </dl>
+    <div class="impact"><b>Impact:</b> tells you whether key content / CTAs sit above the "fold of attention" — critical for landing-page optimisation.</div>
+  </div>
+</div>
+
+<!-- ───────────────── 9. TIME ON PAGE ───────────────── -->
+<div class="page section" id="time">
+  <h2>9 &nbsp; Time-on-Page Analytics</h2>
+  <div class="feature">
+    <h3><span class="tag">Analytics</span> GET /api/analytics/time-on-page</h3>
+    <dl class="row">
+      <dt>What it does</dt>
+      <dd>Reports how long visitors spend on each page — average, median, and 90th percentile.</dd>
+      <dt>How it works</dt>
+      <dd>Groups <code>page_view</code> events by session in time order, then computes the dwell time as the gap between consecutive page views. Outliers (negative gaps or &gt; 1 hour) are discarded. It then derives avg / median / p90 per page and counts unique sessions.</dd>
+    </dl>
+    <div class="impact"><b>Impact:</b> distinguishes "engaging" pages from "confusing / stuck" pages; median + p90 avoid being skewed by idle tabs.</div>
+  </div>
+</div>
+
+<!-- ───────────────── 10. ENTRY/EXIT ───────────────── -->
+<div class="page section" id="entryexit">
+  <h2>10 &nbsp; Entry &amp; Exit Pages</h2>
+  <div class="feature">
+    <h3><span class="tag">Analytics</span> GET /api/analytics/entry-exit</h3>
+    <dl class="row">
+      <dt>What it does</dt>
+      <dd>Identifies where journeys most often <strong>begin</strong> and, more importantly, where they <strong>end</strong> (with an exit rate per page).</dd>
+      <dt>How it works</dt>
+      <dd>For each session, page URLs are <strong>canonicalised</strong> (query strings stripped, admin routes dropped, <code>/book/:id</code> &amp; products collapsed) so noise doesn't skew results. The first canonical page is the entry, the last is the exit. A <strong>statistical-noise floor</strong> (≥3 sessions or 1% of traffic) prevents misleading "100% exit" off a single stray visit.</dd>
+    </dl>
+    <div class="impact"><b>Impact:</b> high-exit pages flag friction or dead-ends; entry pages reveal which content brings people in.</div>
+  </div>
+</div>
+
+<!-- ───────────────── 11. RAGE CLICKS ───────────────── -->
+<div class="page section" id="rage">
+  <h2>11 &nbsp; Rage-Click Detection</h2>
+  <div class="feature">
+    <h3><span class="tag">UX Signal</span> GET /api/analytics/rage-clicks</h3>
+    <dl class="row">
+      <dt>What it does</dt>
+      <dd>Surfaces spots where users repeatedly, frustratedly click — a strong signal of broken or unresponsive UI.</dd>
+      <dt>How it works</dt>
+      <dd>Within a session it scans clicks in time order and forms a <strong>cluster</strong> when ≥3 clicks land within <strong>30px</strong> and <strong>600ms</strong> of an anchor click. Nearby clusters (within 40px) are merged into "rage zones" and counted by how many sessions hit them.</dd>
+    </dl>
+    <div class="impact"><b>Impact:</b> directly exposes broken buttons / misleading non-clickable elements — quick wins that recover otherwise-lost conversions.</div>
+  </div>
+</div>
+
+<!-- ───────────────── 12. NAV PATHS ───────────────── -->
+<div class="page section" id="navpaths">
+  <h2>12 &nbsp; Navigation Paths</h2>
+  <div class="feature">
+    <h3><span class="tag">Analytics</span> GET /api/nav-paths</h3>
+    <dl class="row">
+      <dt>What it does</dt>
+      <dd>Lists the most common end-to-end routes users take through the site (e.g. <code>/products → /cart → /checkout</code>) and flags which paths converted.</dd>
+      <dt>How it works</dt>
+      <dd>Builds an ordered, de-duplicated list of canonical pages per session, joins them into a path string, and counts occurrences. It also computes overall conversion rate and the single most common path, returning the top N.</dd>
+    </dl>
+    <div class="impact"><b>Impact:</b> shows the "happy paths" that lead to purchase vs. the wandering paths that don't — informing navigation and merchandising.</div>
+  </div>
+</div>
+
+<!-- ───────────────── 13. CONVERSION INFLUENCE ───────────────── -->
+<div class="page section" id="conv">
+  <h2>13 &nbsp; Conversion Influence</h2>
+  <div class="feature">
+    <h3><span class="tag">Analytics</span> GET /api/conversion-influence</h3>
+    <dl class="row">
+      <dt>What it does</dt>
+      <dd>Compares behaviour of <strong>converted</strong> vs <strong>dropped-off</strong> sessions across clicks, scroll, duration, and pages visited — then auto-generates plain-English insights.</dd>
+      <dt>How it works</dt>
+      <dd>A session is "converted" if it visited an order/payment/success page (detected via <code>ILIKE</code>). It computes avg &amp; median of each metric per group. Where converters out-perform droppers by &gt;1.5×, it emits an insight like <em>"Converted users scrolled 2.3x more than users who dropped off."</em></dd>
+    </dl>
+    <div class="impact"><b>Impact:</b> translates raw numbers into shareable, decision-ready statements about what behaviours drive sales.</div>
+  </div>
+</div>
+
+<!-- ───────────────── 14. ENGAGEMENT ───────────────── -->
+<div class="page section" id="engagement">
+  <h2>14 &nbsp; Engagement Scoring</h2>
+  <div class="feature">
+    <h3><span class="tag">Scoring</span> GET /api/engagement-scores</h3>
+    <dl class="row">
+      <dt>What it does</dt>
+      <dd>Assigns every session an engagement score (0–100) and buckets sessions into <strong>Highly / Moderately / Passive</strong>.</dd>
+      <dt>How it works</dt>
+      <dd>A weighted blend of normalised signals:
+        <pre>score = avg_scroll_depth × 0.40
+      + normalized_duration × 0.35
+      + normalized_clicks   × 0.25</pre>
+        Duration and clicks are normalised against the site maximum. Thresholds: ≥70 highly, ≥40 moderately, else passive. It also reports average score, scores per funnel stage, and the top sessions.</dd>
+    </dl>
+    <div class="impact"><b>Impact:</b> a single, intuitive KPI to track content/UX quality over time and to segment audiences.</div>
+  </div>
+</div>
+
+<!-- ───────────────── 15. SESSIONS ───────────────── -->
+<div class="page section" id="sessions">
+  <h2>15 &nbsp; Session Analytics (List &amp; Detail)</h2>
+  <div class="feature">
+    <h3><span class="tag">Explorer</span> GET /api/analytics/sessions &amp; /sessions/:id</h3>
+    <dl class="row">
+      <dt>What it does</dt>
+      <dd>A paginated, sortable table of individual sessions, drillable into a full event-by-event timeline.</dd>
+      <dt>How it works</dt>
+      <dd>The list supports server-side pagination (max 50/page) and <strong>whitelisted</strong> sort columns (duration, time, pages, funnel stage, scroll) to prevent SQL injection. It <code>LEFT JOIN</code>s <code>session_features</code> for richer metrics. The detail view returns session stats plus its first 300 ordered events.</dd>
+    </dl>
+    <div class="impact"><b>Impact:</b> lets analysts move from aggregate trends down to a single real user's journey — invaluable for debugging UX issues.</div>
+  </div>
+</div>
+
+<!-- ───────────────── 16. RISK PREDICTION ───────────────── -->
+<div class="page section" id="risk">
+  <h2>16 &nbsp; Drop-off Risk Prediction (Machine Learning)</h2>
+  <div class="feature">
+    <h3><span class="tag">ML</span> GET /api/predict/:session_id → FastAPI /predict</h3>
+    <dl class="row">
+      <dt>What it does</dt>
+      <dd>Predicts the probability that a given session will <strong>drop off</strong> (fail to convert).</dd>
+      <dt>How it works</dt>
+      <dd>The backend gathers the session's features (duration, clicks, max scroll, pages) plus a derived <strong>engagement score</strong>, and POSTs them to the FastAPI service. There an <strong>XGBoost classifier</strong> returns a class and a probability. The model adapts to 4- or 5-feature input via <code>n_features_in_</code>. Errors from the ML service are surfaced cleanly to the caller.</dd>
+    </dl>
+    <div class="impact"><b>Impact:</b> moves from <em>describing</em> the past to <em>predicting</em> the future — enabling proactive interventions (offers, nudges) on at-risk sessions.</div>
+  </div>
+</div>
+
+<!-- ───────────────── 17. RISK DISTRIBUTION ───────────────── -->
+<div class="page section" id="riskdist">
+  <h2>17 &nbsp; Risk Distribution</h2>
+  <div class="feature">
+    <h3><span class="tag">Scoring</span> GET /api/analytics/risk-distribution</h3>
+    <dl class="row">
+      <dt>What it does</dt>
+      <dd>Buckets all sessions into <strong>High / Medium / Low</strong> drop-off risk for an at-a-glance health view.</dd>
+      <dt>How it works</dt>
+      <dd>A transparent, explainable scoring formula combines five normalised signals (duration 0.28, funnel stage 0.24, pages 0.20, scroll 0.18, clicks 0.10) into an engagement value; risk = <code>1 − engagement</code>, clamped to 0.02–0.98. Tiers: ≥0.67 high, ≥0.40 medium, else low. Returns the distribution plus the top 100 riskiest sessions.</dd>
+    </dl>
+    <div class="impact"><b>Impact:</b> a fast, model-independent risk pulse that complements the ML predictor and is easy to explain to stakeholders.</div>
+  </div>
+</div>
+
+<!-- ───────────────── 18. SENTIMENT ───────────────── -->
+<div class="page section" id="sentiment">
+  <h2>18 &nbsp; Sentiment Analysis &amp; Insights</h2>
+  <div class="feature">
+    <h3><span class="tag">ML</span> POST /api/sentiment → FastAPI /sentiment</h3>
+    <dl class="row">
+      <dt>What it does</dt>
+      <dd>Reads customer feedback text and classifies it as positive / neutral / negative with a confidence score.</dd>
+      <dt>How it works</dt>
+      <dd>The backend forwards the text to the FastAPI service, which runs a Hugging Face <strong>BERT</strong> <code>sentiment-analysis</code> pipeline and returns a label and score.</dd>
+    </dl>
+  </div>
+  <div class="feature">
+    <h3><span class="tag">Analytics</span> GET /api/analytics/sentiment-insights</h3>
+    <dl class="row">
+      <dt>What it does</dt>
+      <dd>Aggregates stored feedback into counts, percentages, and representative sample quotes per sentiment.</dd>
+      <dt>How it works</dt>
+      <dd>Queries the <code>feedback</code> table grouped by <code>sentiment_label</code>, computes percentages, and pulls the 3 strongest positive/neutral and 3 most negative messages as illustrative snippets.</dd>
+    </dl>
+    <div class="impact"><b>Impact:</b> turns unstructured customer voice into a quantified signal you can trend and act on, with real quotes for context.</div>
+  </div>
+</div>
+
+<!-- ───────────────── 19. ML TRAINING ───────────────── -->
+<div class="page section" id="mltrain">
+  <h2>19 &nbsp; ML Training Pipeline</h2>
+  <div class="feature">
+    <h3><span class="tag">Pipeline</span> train_model.py</h3>
+    <dl class="row">
+      <dt>What it does</dt>
+      <dd>Trains and saves the XGBoost drop-off model directly from live session data.</dd>
+      <dt>How it works</dt>
+      <dd>Connects to Postgres, labels each session (reached payment/order-confirmed ⇒ converted, else drop-off), and trains an <code>XGBClassifier</code> with a stratified train/test split. It handles class imbalance via <strong>balanced sample weights</strong> and reports accuracy, <strong>balanced accuracy</strong>, a majority-class baseline, classification report, and confusion matrix before saving <code>xgboost_model.pkl</code>.</dd>
+    </dl>
+    <div class="note"><b>Note:</b> guard-rails raise clear errors if there's only one class or too few minority samples — so training fails loudly rather than producing a useless model.</div>
+    <div class="impact"><b>Impact:</b> a reproducible, data-driven retraining loop — the model improves as more real traffic accumulates.</div>
+  </div>
+</div>
+
+<!-- ───────────────── 20. DEPLOY ───────────────── -->
+<div class="page section" id="deploy">
+  <h2>20 &nbsp; Deployment &amp; Tech Stack</h2>
+  <p>The entire platform is containerised. A one-time setup profile creates tables and seeds the admin; then a single command brings up all services.</p>
+  <pre># first time only — create tables & seed admin
+docker compose --profile setup up db-setup
+
+# start everything
+docker compose up --build</pre>
+
+  <table>
+    <tr><th>Layer</th><th>Technology</th><th>Why</th></tr>
+    <tr><td>Frontend</td><td>React 18 + Vite</td><td>Fast dev experience, component-based dashboards.</td></tr>
+    <tr><td>API</td><td>Node.js + Express</td><td>Lightweight, ideal for I/O-bound analytics queries.</td></tr>
+    <tr><td>Auth</td><td>JWT + bcrypt</td><td>Stateless, standard, secure.</td></tr>
+    <tr><td>Database</td><td>PostgreSQL 16</td><td>Reliable relational store with rich SQL for analytics.</td></tr>
+    <tr><td>ML</td><td>FastAPI, XGBoost, Transformers (BERT)</td><td>Python ecosystem for modelling, isolated from the API.</td></tr>
+    <tr><td>Orchestration</td><td>Docker Compose</td><td>One-command, reproducible multi-service environment.</td></tr>
+  </table>
+
+  <h3>Talking points for the presentation</h3>
+  <ul>
+    <li><strong>End-to-end story:</strong> raw clicks → aggregated metrics → predictive ML, all in one platform.</li>
+    <li><strong>Production-minded:</strong> multi-tenant isolation, RBAC, batched/resilient tracking, injection-safe queries.</li>
+    <li><strong>Explainable + predictive:</strong> transparent scoring formulas sit alongside ML models, so insights are trustworthy <em>and</em> forward-looking.</li>
+    <li><strong>Extensible:</strong> new sites need only a row in <code>sites</code> and the tracker snippet; new analytics are just new scoped endpoints.</li>
+  </ul>
+
+  <footer>Customer Journey Analytics — Internal Feature Guide · Generated for the team presentation</footer>
+</div>
+
+</body>
+</html>

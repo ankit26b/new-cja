@@ -3,6 +3,7 @@ import { useAuth } from './AuthContext';
 
 const SiteContext = createContext(null);
 const LOCAL_STORAGE_KEY = 'cja_current_site_id';
+const EXCLUDED_SITE_IDS = new Set(['default_site']);
 
 export function SiteProvider({ children }) {
   const { token, isMasterAdmin } = useAuth();
@@ -37,7 +38,8 @@ export function SiteProvider({ children }) {
         return res.json();
       })
       .then((sites) => {
-        const normalizedSites = Array.isArray(sites) ? sites : [];
+        const normalizedSites = (Array.isArray(sites) ? sites : [])
+          .filter((site) => site?.site_id && !EXCLUDED_SITE_IDS.has(site.site_id));
         setAvailableSites(normalizedSites);
 
         const persisted = localStorage.getItem(LOCAL_STORAGE_KEY);

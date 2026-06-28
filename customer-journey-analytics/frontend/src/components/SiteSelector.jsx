@@ -32,7 +32,7 @@ export default function SiteSelector() {
         }}
       >
         {loadingSites && <option value="">Loading sites...</option>}
-        {!loadingSites && availableSites.length === 0 && <option value="">No sites available</option>}
+        {!loadingSites && availableSites.length === 0 && <option value="">No client sites assigned</option>}
         {!loadingSites && availableSites.map((site) => (
           <option key={site.site_id} value={site.site_id}>
             {site.display_name}

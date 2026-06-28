@@ -446,25 +446,44 @@ router.get('/analytics/entry-exit', authMiddleware, requireAuthorizedSiteId, asy
         const entryCounts = {};
         const exitCounts = {};
         const pageVisitCounts = {};
+        let countedSessions = 0;
 
         for (const events of Object.values(sessions)) {
-            const entryPage = events[0].page_url;
-            const exitPage = events[events.length - 1].page_url;
+            // Canonicalize pages (strip trailing slashes, drop admin routes,
+            // collapse /book/:id & /product/*) so noise/dupes don't skew results.
+            const canonPages = [];
+            for (const e of events) {
+                const canon = canonicalFunnelPage(e.page_url);
+                if (!canon) continue;
+                if (canonPages[canonPages.length - 1] !== canon) canonPages.push(canon);
+            }
+            if (canonPages.length === 0) continue;
+
+            countedSessions++;
+            const entryPage = canonPages[0];
+            const exitPage = canonPages[canonPages.length - 1];
 
             entryCounts[entryPage] = (entryCounts[entryPage] || 0) + 1;
             exitCounts[exitPage] = (exitCounts[exitPage] || 0) + 1;
 
-            const visitedPages = new Set(events.map(e => e.page_url));
+            const visitedPages = new Set(canonPages);
             for (const p of visitedPages) {
                 pageVisitCounts[p] = (pageVisitCounts[p] || 0) + 1;
             }
         }
 
+        // Statistical-noise floor: ignore pages seen in a negligible number of
+        // sessions (e.g. a single stray manual visit) so we don't report a
+        // scary "100% exit" off a 1-session sample.
+        const minSamples = Math.max(3, Math.round(countedSessions * 0.01));
+
         const entryPages = Object.entries(entryCounts)
+            .filter(([, session_count]) => session_count >= minSamples)
             .map(([page, session_count]) => ({ page, session_count }))
             .sort((a, b) => b.session_count - a.session_count);
 
         const exitPages = Object.entries(exitCounts)
+            .filter(([, session_count]) => session_count >= minSamples)
             .map(([page, session_count]) => ({
                 page,
                 session_count,
@@ -589,8 +608,29 @@ router.get('/analytics/rage-clicks', authMiddleware, requireAuthorizedSiteId, as
     }
 });
 
-// Customer-facing pages only (exclude admin/analytics pages)
-const CUSTOMER_PAGES = ['/', '/product', '/cart', '/checkout', '/payment'];
+// Routes that are NOT part of the customer journey (the analytics dashboard itself)
+const ADMIN_ROUTE_PATTERN = /(dashboard|session-analytics|risk-prediction|sentiment-insights|heatmap|scroll-heatmap|time-on-page|entry-exit|rage-clicks|nav-paths|conversion-influence|engagement-scores|users|login|register)/i;
+
+// Pages that represent a completed conversion across either demo site
+// (ecommerce → /order-complete, bookstore → /order-confirmed, plus generic fallbacks)
+const CONVERSION_ROUTE_PATTERN = /(order-complete|order-confirmed|payment|thank|success)/i;
+
+// Collapse product/book detail pages so navigation paths stay readable, and
+// strip query strings / trailing slashes for consistent grouping.
+function canonicalFunnelPage(url) {
+    if (!url || typeof url !== 'string') return null;
+    let u = url.split('?')[0].trim();
+    if (u.length > 1 && u.endsWith('/')) u = u.slice(0, -1);
+    if (!u) return null;
+    if (ADMIN_ROUTE_PATTERN.test(u)) return null;      // never count admin pages
+    if (/^\/book\//.test(u)) return '/book/:id';
+    if (/^\/product\//.test(u)) return '/products';
+    return u;
+}
+
+function isConversionPage(url) {
+    return !!url && CONVERSION_ROUTE_PATTERN.test(url.split('?')[0]);
+}
 
 // Navigation Paths
 // Multi-tenant: filter nav-paths by site_id
@@ -603,18 +643,18 @@ router.get('/nav-paths', authMiddleware, requireAuthorizedSiteId, async (req, re
             SELECT session_id, page_url, timestamp
             FROM events
             WHERE event_type = 'page_view'
-              AND page_url = ANY($1)
-              AND site_id = $2
+              AND site_id = $1
             ORDER BY session_id, timestamp
-        `, [CUSTOMER_PAGES, site_id]);
+        `, [site_id]);
 
-        // Group pages by session in visit order
+        // Group canonical pages by session in visit order (dropping consecutive dupes)
         const sessions = {};
         result.rows.forEach(row => {
-            if (!sessions[row.session_id]) {
-                sessions[row.session_id] = [];
-            }
-            sessions[row.session_id].push(row.page_url);
+            const canon = canonicalFunnelPage(row.page_url);
+            if (!canon) return;
+            if (!sessions[row.session_id]) sessions[row.session_id] = [];
+            const arr = sessions[row.session_id];
+            if (arr[arr.length - 1] !== canon) arr.push(canon);
         });
 
         // Build path strings and count occurrences
@@ -623,11 +663,12 @@ router.get('/nav-paths', authMiddleware, requireAuthorizedSiteId, async (req, re
         let convertedSessions = 0;
 
         Object.values(sessions).forEach(pages => {
+            if (pages.length === 0) return;
             totalSessions++;
             const pathStr = pages.join(' → ');
             pathCounts[pathStr] = (pathCounts[pathStr] || 0) + 1;
 
-            if (pages.includes('/payment')) {
+            if (pages.some(isConversionPage)) {
                 convertedSessions++;
             }
         });
@@ -637,7 +678,7 @@ router.get('/nav-paths', authMiddleware, requireAuthorizedSiteId, async (req, re
             .map(([path, session_count]) => ({
                 path,
                 session_count,
-                converted: path.includes('/payment')
+                converted: path.split(' → ').some(isConversionPage)
             }))
             .sort((a, b) => b.session_count - a.session_count)
             .slice(0, limit);
@@ -681,9 +722,15 @@ router.get('/conversion-influence', authMiddleware, requireAuthorizedSiteId, asy
                     WHEN EXISTS (
                         SELECT 1 FROM events e
                         WHERE e.session_id = s.session_id
-                          AND e.page_url = '/payment'
                           AND e.event_type = 'page_view'
                           AND e.site_id = $1
+                          AND (
+                              e.page_url ILIKE '%order-complete%'
+                              OR e.page_url ILIKE '%order-confirmed%'
+                              OR e.page_url ILIKE '%payment%'
+                              OR e.page_url ILIKE '%thank%'
+                              OR e.page_url ILIKE '%success%'
+                          )
                     ) THEN true
                     ELSE false
                 END AS converted

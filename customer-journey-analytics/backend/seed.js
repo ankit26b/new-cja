@@ -445,6 +445,42 @@ function buildEventsForSession(rng, siteConfig, sessionId, sessionStart, pageSeq
       }
     }
 
+    // ── Rage-click bursts ───────────────────────────────────────────────
+    // Frustrated users (hesitant browsers / higher-risk sessions) sometimes
+    // click the same element 3-5 times rapidly when it feels unresponsive.
+    // We emit a tight cluster (same page, <600ms span, <30px spread) so the
+    // rage-click detector in analytics.js picks it up as a genuine signal.
+    const archetypeForRage = inferArchetypeFromFeatures(features);
+    const isFrustrationPage = /\/(cart|checkout|payment)/.test(page);
+    const proneToRage = archetypeForRage === 'hesitant_browser' || features.riskTier === 'high' || features.riskTier === 'medium';
+    const rageChance = isFrustrationPage && proneToRage ? 0.35 : (isFrustrationPage ? 0.06 : 0.02);
+
+    if (rng() < rageChance) {
+      const rageHotspot = pickHotspot(rng, siteConfig, page);
+      const anchorX = clamp(rageHotspot.x + randInt(rng, -8, 8), 12, 1360);
+      const anchorY = clamp(rageHotspot.y + randInt(rng, -8, 8), 12, 860);
+      const rageCount = randInt(rng, 3, 5);
+
+      // Small lead-in delay before the frustration burst begins
+      cursor = new Date(cursor.getTime() + randInt(rng, 200, 700));
+
+      for (let r = 0; r < rageCount; r++) {
+        // 50-110ms between clicks keeps the whole burst comfortably under 600ms
+        cursor = new Date(cursor.getTime() + randInt(rng, 50, 110));
+        events.push({
+          session_id: sessionId,
+          site_id: siteConfig.siteId,
+          event_type: 'click',
+          page_url: page,
+          // ±9px jitter stays within the 30px clustering radius
+          x: clamp(anchorX + randInt(rng, -9, 9), 10, 1360),
+          y: clamp(anchorY + randInt(rng, -9, 9), 10, 860),
+          scroll_depth: null,
+          timestamp: new Date(cursor),
+        });
+      }
+    }
+
     for (const depth of scrollSeries) {
       cursor = new Date(cursor.getTime() + randInt(rng, 250, 1250));
       events.push({

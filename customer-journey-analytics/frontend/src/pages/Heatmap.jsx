@@ -8,9 +8,101 @@ import { useSite } from "../context/SiteContext";
 const REF_W = 1280;
 const REF_H = 800;
 
+// Admin/app routes that should never appear in the website-page selector
+const EXCLUDED_ADMIN_ROUTES = new Set([
+  "/dashboard",
+  "/session-analytics",
+  "/risk-prediction",
+  "/sentiment-insights",
+  "/heatmap",
+  "/scroll-heatmap",
+  "/time-on-page",
+  "/entry-exit",
+  "/rage-clicks",
+  "/nav-paths",
+  "/conversion-influence",
+  "/engagement-scores",
+  "/users",
+  "/login",
+  "/register",
+]);
+
+function normaliseRoute(route) {
+  if (!route || typeof route !== "string") return "";
+  const trimmed = route.trim();
+  if (!trimmed) return "";
+  if (trimmed === "/") return "/";
+  return trimmed.endsWith("/") ? trimmed.slice(0, -1) : trimmed;
+}
+
+function isClientWebsiteRoute(route) {
+  const normalised = normaliseRoute(route);
+  if (!normalised) return false;
+  return !EXCLUDED_ADMIN_ROUTES.has(normalised);
+}
+
+// Rounded-rectangle path helper for the reference wireframe.
+function roundRect(ctx, x, y, w, h, r) {
+  const radius = Math.max(0, Math.min(r, w / 2, h / 2));
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + w, y, x + w, y + h, radius);
+  ctx.arcTo(x + w, y + h, x, y + h, radius);
+  ctx.arcTo(x, y + h, x, y, radius);
+  ctx.arcTo(x, y, x + w, y, radius);
+  ctx.closePath();
+}
+
+// Draws a generic page-layout wireframe (header, hero, cards, footer) onto an
+// underlay canvas so heat points have visual context during presentations.
+// All coordinates are expressed in the 1280x800 reference space and scaled.
+function drawReferenceWireframe(canvas, w, h) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const sx = w / REF_W;
+  const sy = h / REF_H;
+  const s = Math.min(sx, sy);
+
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, w, h);
+
+  const block = (x, y, bw, bh, fill, stroke, r = 6) => {
+    roundRect(ctx, x * sx, y * sy, bw * sx, bh * sy, r * s);
+    if (fill)   { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { ctx.lineWidth = Math.max(1, s); ctx.strokeStyle = stroke; ctx.stroke(); }
+  };
+
+  // Header bar + logo + nav links
+  block(0, 0, REF_W, 64, "#f8fafc", "#e2e8f0", 0);
+  block(40, 20, 120, 24, "#cbd5e1", null, 6);
+  for (let i = 0; i < 4; i++) block(REF_W - 360 + i * 90, 24, 64, 16, "#e2e8f0", null, 4);
+
+  // Hero band with heading, subtext and a call-to-action button
+  block(40, 96, REF_W - 80, 180, "#f1f5f9", "#e2e8f0", 10);
+  block(80, 140, 360, 28, "#cbd5e1", null, 6);
+  block(80, 184, 260, 18, "#dbe2ea", null, 4);
+  block(80, 214, 160, 36, "#c7d2fe", null, 8);
+
+  // Three content cards
+  const cardY = 312;
+  const cardW = (REF_W - 80 - 2 * 24) / 3;
+  for (let i = 0; i < 3; i++) {
+    const cx = 40 + i * (cardW + 24);
+    block(cx, cardY, cardW, 220, "#f8fafc", "#e2e8f0", 10);
+    block(cx + 16, cardY + 16, cardW - 32, 110, "#eef2f7", null, 6);
+    block(cx + 16, cardY + 140, cardW - 80, 18, "#cbd5e1", null, 4);
+    block(cx + 16, cardY + 168, cardW - 40, 14, "#dbe2ea", null, 4);
+  }
+
+  // Footer bar
+  block(0, REF_H - 56, REF_W, 56, "#f1f5f9", "#e2e8f0", 0);
+}
+
 export default function Heatmap() {
 
   const canvasRef   = useRef(null);
+  const bgCanvasRef = useRef(null);
   const containerRef = useRef(null);
   const [page, setPage]   = useState("");
   const [pages, setPages] = useState([]);
@@ -36,19 +128,19 @@ export default function Heatmap() {
     })
       .then(res => res.ok ? res.json() : [])
       .then(list => {
-        const arr = Array.isArray(list) ? list : [];
+        const arr = (Array.isArray(list) ? list : []).filter(isClientWebsiteRoute);
         setPages(arr);
         // Reset to first page of the NEW site
         setPage(arr.length > 0 ? arr[0] : '');
       })
-      .catch(() => setPages([]));
+      .catch(() => { setPages([]); setPage(''); });
   }, [token, currentSiteId]);
 
   useEffect(() => {
-    if (!token || !currentSiteId) {
-      setLoading(true);
-      setError('');
+    if (!token || !currentSiteId || !page) {
       setHasData(false);
+      setError('');
+      setLoading(Boolean(token && currentSiteId && !page) ? false : true);
       return;
     }
 
@@ -80,6 +172,15 @@ export default function Heatmap() {
         const canvasH = Math.round(canvasW * (REF_H / REF_W));
         canvas.width  = canvasW;
         canvas.height = canvasH;
+
+        // Draw the reference page wireframe on the underlay canvas so heat
+        // points are shown in the context of a typical page layout.
+        const bgCanvas = bgCanvasRef.current;
+        if (bgCanvas) {
+          bgCanvas.width  = canvasW;
+          bgCanvas.height = canvasH;
+          drawReferenceWireframe(bgCanvas, canvasW, canvasH);
+        }
 
         const scaleX = canvasW / REF_W;
         const scaleY = canvasH / REF_H;
@@ -144,7 +245,7 @@ export default function Heatmap() {
           onFocus={(e) => { e.target.style.borderColor = '#667eea'; e.target.style.boxShadow = '0 0 0 3px rgba(102,126,234,0.2)'; }}
           onBlur={(e)  => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none'; }}
         >
-          {pages.length === 0 && <option value="">Loading pages…</option>}
+          {pages.length === 0 && <option value="">No website routes for selected site</option>}
           {pages.map(p => <option key={p} value={p}>{p}</option>)}
         </select>
         <div style={{ position:'absolute', right:'14px', top:'50%', transform:'translateY(-50%)', pointerEvents:'none', color:'#64748b' }}>
@@ -182,13 +283,33 @@ export default function Heatmap() {
       {/* Canvas (always rendered so ref is available; hidden while loading) */}
       <div
         ref={containerRef}
-        style={{ marginTop:12, width:'100%', display: (loadingSites || loading) ? 'none' : 'block' }}
+        style={{ marginTop:12, width:'100%', position:'relative', display: (loadingSites || loading) ? 'none' : 'block' }}
       >
+        {/* Underlay: reference page wireframe for visual context */}
+        <canvas
+          ref={bgCanvasRef}
+          style={{ display:'block', width:'100%', border:'1px solid #e2e8f0', borderRadius:8, background:'#ffffff' }}
+        />
+        {/* Overlay: transparent heat layer aligned to the wireframe */}
         <canvas
           ref={canvasRef}
-          style={{ display:'block', width:'100%', border:'1px solid #e2e8f0', borderRadius:8, background:'#f8fafc' }}
+          style={{ position:'absolute', top:0, left:0, display:'block', width:'100%', background:'transparent', pointerEvents:'none' }}
         />
       </div>
+
+      {/* Legend */}
+      {!loadingSites && !loading && !error && hasData && (
+        <div style={{ display:'flex', alignItems:'center', gap:10, marginTop:12, fontSize:13, color:'#64748b' }}>
+          <span style={{ fontWeight:600 }}>Density</span>
+          <span>Low</span>
+          <div style={{
+            width:160, height:12, borderRadius:6, border:'1px solid #e2e8f0',
+            background:'linear-gradient(to right, rgba(0,0,255,0.5), #00ffff, #00ff00, #ffff00, #ff0000)',
+          }} />
+          <span>High</span>
+          <span style={{ marginLeft:'auto', fontSize:12, color:'#94a3b8' }}>Background is a reference page layout, not the live page.</span>
+        </div>
+      )}
     </div>
   );
 }

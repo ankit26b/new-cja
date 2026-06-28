@@ -4,6 +4,57 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, Cell, ResponsiveContainer, LabelL
 import { useAuth } from '../context/AuthContext';
 import { useSite } from '../context/SiteContext';
 
+// Admin/app routes that should never appear in client website analytics
+const EXCLUDED_ADMIN_ROUTES = new Set([
+    '/dashboard',
+    '/session-analytics',
+    '/risk-prediction',
+    '/sentiment-insights',
+    '/heatmap',
+    '/scroll-heatmap',
+    '/time-on-page',
+    '/entry-exit',
+    '/rage-clicks',
+    '/nav-paths',
+    '/conversion-influence',
+    '/engagement-scores',
+    '/users',
+    '/login',
+    '/register',
+]);
+
+function normaliseRoute(route) {
+    if (!route || typeof route !== 'string') return '';
+    const trimmed = route.trim();
+    if (!trimmed) return '';
+    if (trimmed === '/') return '/';
+    return trimmed.endsWith('/') ? trimmed.slice(0, -1) : trimmed;
+}
+
+function isClientWebsiteRoute(route) {
+    const normalised = normaliseRoute(route);
+    if (!normalised) return false;
+    return !EXCLUDED_ADMIN_ROUTES.has(normalised);
+}
+
+// Terminal / conversion pages are EXPECTED exits (e.g. order complete), so they
+// should not be reported as a "drop-off". Used to find the biggest *genuine* leak.
+const TERMINAL_ROUTES = new Set([
+    '/payment',
+    '/order-complete',
+    '/order-confirmed',
+    '/thank-you',
+    '/thankyou',
+    '/success',
+]);
+
+function isTerminalRoute(route) {
+    const normalised = normaliseRoute(route);
+    if (!normalised) return false;
+    if (TERMINAL_ROUTES.has(normalised)) return true;
+    return /payment|order-complete|order-confirmed|thank|success/.test(normalised);
+}
+
 function EntryExit() {
     const { token } = useAuth();
     const { currentSiteId, availableSites } = useSite();
@@ -36,8 +87,8 @@ function EntryExit() {
                 return res.json();
             })
             .then(data => {
-                setEntryPages(data.entryPages || []);
-                setExitPages(data.exitPages || []);
+                setEntryPages((data.entryPages || []).filter(p => isClientWebsiteRoute(p.page)));
+                setExitPages((data.exitPages || []).filter(p => isClientWebsiteRoute(p.page)));
                 setError('');
             })
             .catch(err => {
@@ -53,8 +104,11 @@ function EntryExit() {
         return () => controller.abort();
     }, [token, currentSiteId]);
 
-    const highestExitRate = exitPages.length > 0
-        ? exitPages.reduce((max, p) => p.exit_rate > max.exit_rate ? p : max, exitPages[0])
+    // Biggest *genuine* drop-off: highest exit rate among non-terminal pages.
+    // Terminal pages (order complete, payment success) are expected exits, not leaks.
+    const dropOffCandidates = exitPages.filter(p => !isTerminalRoute(p.page));
+    const biggestDropOff = dropOffCandidates.length > 0
+        ? dropOffCandidates.reduce((max, p) => p.exit_rate > max.exit_rate ? p : max, dropOffCandidates[0])
         : null;
 
     if (loading) {
@@ -152,15 +206,19 @@ function EntryExit() {
                     </div>
 
                     {/* Callout */}
-                    {highestExitRate && (
+                    {biggestDropOff && (
                         <div style={styles.callout}>
                             <div style={styles.calloutIcon}>⚠️</div>
                             <div>
                                 <h4 style={styles.calloutTitle}>Biggest Drop-off Point</h4>
                                 <p style={styles.calloutText}>
-                                    <strong style={{ color: '#dc2626' }}>{highestExitRate.page}</strong> has the highest exit rate at{' '}
-                                    <strong style={{ color: '#dc2626' }}>{highestExitRate.exit_rate}%</strong>{' '}
-                                    ({highestExitRate.session_count} sessions exited here).
+                                    <strong style={{ color: '#dc2626' }}>{biggestDropOff.page}</strong> has the highest exit rate at{' '}
+                                    <strong style={{ color: '#dc2626' }}>{biggestDropOff.exit_rate}%</strong>{' '}
+                                    ({biggestDropOff.session_count} sessions left here without reaching the end).
+                                    <br />
+                                    <span style={{ color: '#64748b', fontSize: 13 }}>
+                                        Conversion pages (e.g. order complete) are excluded since exiting there is expected.
+                                    </span>
                                 </p>
                             </div>
                         </div>

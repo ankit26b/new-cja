@@ -4,6 +4,39 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } fro
 import { useAuth } from '../context/AuthContext';
 import { useSite } from '../context/SiteContext';
 
+// Admin/app routes that should never appear in client website analytics
+const EXCLUDED_ADMIN_ROUTES = new Set([
+    '/dashboard',
+    '/session-analytics',
+    '/risk-prediction',
+    '/sentiment-insights',
+    '/heatmap',
+    '/scroll-heatmap',
+    '/time-on-page',
+    '/entry-exit',
+    '/rage-clicks',
+    '/nav-paths',
+    '/conversion-influence',
+    '/engagement-scores',
+    '/users',
+    '/login',
+    '/register',
+]);
+
+function normaliseRoute(route) {
+    if (!route || typeof route !== 'string') return '';
+    const trimmed = route.trim();
+    if (!trimmed) return '';
+    if (trimmed === '/') return '/';
+    return trimmed.endsWith('/') ? trimmed.slice(0, -1) : trimmed;
+}
+
+function isClientWebsiteRoute(route) {
+    const normalised = normaliseRoute(route);
+    if (!normalised) return false;
+    return !EXCLUDED_ADMIN_ROUTES.has(normalised);
+}
+
 function TimeOnPage() {
     const { token } = useAuth();
     const { currentSiteId, availableSites } = useSite();
@@ -33,7 +66,8 @@ function TimeOnPage() {
                 return res.json();
             })
             .then(result => {
-                setData(result);
+                const rows = Array.isArray(result) ? result.filter(r => isClientWebsiteRoute(r.page)) : [];
+                setData(rows);
                 setError('');
             })
             .catch(err => {

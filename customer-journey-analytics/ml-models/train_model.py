@@ -5,6 +5,9 @@ from xgboost import XGBClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import classification_report
+from sklearn.metrics import balanced_accuracy_score
+from sklearn.metrics import confusion_matrix
+from sklearn.utils.class_weight import compute_sample_weight
 import joblib
 
 import os
@@ -65,7 +68,14 @@ SELECT
         WHEN EXISTS (
             SELECT 1 FROM events e 
             WHERE e.session_id = s.session_id 
-            AND e.page_url = '/payment'
+            AND (
+                e.page_url IN (
+                    '/payment', '/payment/',
+                    '/order-confirmed', '/order-confirmed/'
+                )
+                OR e.page_url LIKE '%/payment%'
+                OR e.page_url LIKE '%/order-confirmed%'
+            )
         )
         THEN 0
         ELSE 1
@@ -82,26 +92,51 @@ conn.close()
 X = df[['duration', 'total_clicks', 'max_scroll_depth', 'total_pages']]
 y = df['drop_off']
 
+class_counts = y.value_counts().to_dict()
+print("Class counts:", class_counts)
+
+if y.nunique() < 2:
+    raise ValueError("Training data has only one class. Need both drop-off and converted sessions.")
+
+minority_class_count = int(y.value_counts().min())
+if minority_class_count < 2:
+    raise ValueError("Not enough minority-class samples for train/test split. Collect more converted sessions.")
+
 # Train-test split
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42
+    X, y, test_size=0.2, random_state=42, stratify=y
 )
 
 # Train model
-model = XGBClassifier()
-model.fit(X_train, y_train)
+sample_weight_train = compute_sample_weight(class_weight='balanced', y=y_train)
+
+model = XGBClassifier(
+    n_estimators=200,
+    max_depth=4,
+    learning_rate=0.05,
+    subsample=0.9,
+    colsample_bytree=0.9,
+    random_state=42,
+    eval_metric='logloss'
+)
+model.fit(X_train, y_train, sample_weight=sample_weight_train)
 
 # Evaluate
 predictions = model.predict(X_test)
 accuracy = accuracy_score(y_test, predictions)
+balanced_acc = balanced_accuracy_score(y_test, predictions)
+
+majority_baseline = max(y_test.mean(), 1 - y_test.mean())
 
 print("Model Accuracy:", accuracy)
+print("Balanced Accuracy:", round(balanced_acc, 4))
+print("Majority-class baseline accuracy:", round(float(majority_baseline), 4))
 
 print("Total sessions:", len(df))
 print(df['drop_off'].value_counts())
 
-
-print(classification_report(y_test, predictions))
+print(classification_report(y_test, predictions, zero_division=0))
+print("Confusion Matrix:\n", confusion_matrix(y_test, predictions))
 
 # Save model
 joblib.dump(model, "xgboost_model.pkl")

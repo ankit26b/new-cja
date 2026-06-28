@@ -428,7 +428,7 @@ const dS = {
     fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif",
   },
   drawerHead: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
-  drawerTitle: { margin: 0, fontSize: 20, fontWeight: 700 },
+  drawerTitle: { margin: 0, fontSize: 20, fontWeight: 700, color: '#1e293b' },
   drawerSub:   { margin: '4px 0 0', fontSize: 12, color: '#94a3b8', fontFamily: 'monospace', wordBreak: 'break-all' },
   closeBtn: {
     background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 8,

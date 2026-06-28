@@ -228,7 +228,7 @@ export default function Dashboard() {
 const S = {
   page:      { maxWidth:1100, margin:'0 auto', padding:'32px 24px', fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif", color:'#1e293b' },
   topBar:    { display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20, flexWrap:'wrap', gap:12 },
-  topTitle:  { margin:0, fontSize:26, fontWeight:800, color:'#0f172a' },
+  topTitle:  { margin:0, fontSize:26, fontWeight:800, color:'#f8fafc' },
   topSub:    { margin:'4px 0 0', fontSize:14, color:'#64748b' },
   logoutBtn: { padding:'8px 18px', fontSize:14, fontWeight:600, background:'#f1f5f9', border:'1px solid #e2e8f0', borderRadius:8, color:'#475569', cursor:'pointer' },
   toolStrip: { display:'flex', gap:8, flexWrap:'wrap', marginBottom:24, padding:'10px 14px', background:'#f8fafc', borderRadius:10, border:'1px solid #e2e8f0' },

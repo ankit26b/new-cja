@@ -4,6 +4,38 @@ import simpleheat from "simpleheat";
 import { useAuth } from "../context/AuthContext";
 import { useSite } from "../context/SiteContext";
 
+const EXCLUDED_ADMIN_ROUTES = new Set([
+    "/dashboard",
+    "/session-analytics",
+    "/risk-prediction",
+    "/sentiment-insights",
+    "/heatmap",
+    "/scroll-heatmap",
+    "/time-on-page",
+    "/entry-exit",
+    "/rage-clicks",
+    "/nav-paths",
+    "/conversion-influence",
+    "/engagement-scores",
+    "/users",
+    "/login",
+    "/register",
+]);
+
+function normaliseRoute(route) {
+    if (!route || typeof route !== "string") return "";
+    const trimmed = route.trim();
+    if (!trimmed) return "";
+    if (trimmed === "/") return "/";
+    return trimmed.endsWith("/") ? trimmed.slice(0, -1) : trimmed;
+}
+
+function isClientWebsiteRoute(route) {
+    const normalised = normaliseRoute(route);
+    if (!normalised) return false;
+    return !EXCLUDED_ADMIN_ROUTES.has(normalised);
+}
+
 export default function ScrollHeatmap() {
 
     const canvasRef = useRef(null);
@@ -23,17 +55,24 @@ export default function ScrollHeatmap() {
         })
             .then(res => res.ok ? res.json() : [])
             .then(list => {
-                setPages(Array.isArray(list) ? list : []);
-                if (list.length > 0) setPage(list[0]);
+                const filteredPages = (Array.isArray(list) ? list : []).filter(isClientWebsiteRoute);
+                setPages(filteredPages);
+                setPage((prev) => (filteredPages.includes(prev) ? prev : (filteredPages[0] || "")));
             })
-            .catch(() => setPages([]));
+            .catch(() => {
+                setPages([]);
+                setPage("");
+            });
     }, [token, currentSiteId]);
 
     useEffect(() => {
-        if (!token || !currentSiteId) {
+        if (!token || !currentSiteId || !page) {
             setLoading(true);
             setError('');
             setHasData(false);
+            if (!page) {
+                setLoading(false);
+            }
             return;
         }
 
@@ -57,23 +96,49 @@ export default function ScrollHeatmap() {
 
                 const canvas = canvasRef.current;
                 if (!canvas) return;
-                canvas.width = 400;          // narrower canvas for vertical heat
-                canvas.height = 1500;        // match scrollable height
+
+                const CANVAS_W = 360;        // narrower so bands read as a tall page column
+                const CANVAS_H = 2000;       // taller to stretch scroll depth vertically
+                canvas.width = CANVAS_W;
+                canvas.height = CANVAS_H;
+
+                const rows = Array.isArray(data) ? data : [];
+                setHasData(rows.length > 0);
 
                 const heat = simpleheat(canvas);
 
-                // 🔥 THIS IS WHERE YOU ADD IT
-                const points = Array.isArray(data) ? data.map(item => [
-                    200,                // fixed horizontal center
-                    item.scroll_depth,  // vertical scroll position
-                    1                   // intensity
-                ]) : [];
+                // --- Aggregate scroll depths into buckets ----------------------
+                // Instead of stacking every reading onto one point (which clumps
+                // into a thin vertical streak), bucket depths and spread each
+                // bucket across the full width as a horizontal band. Intensity
+                // scales with how many users reached that depth, so the result
+                // "melts" into smooth, readable bands.
+                const BUCKET = 24;                       // px per depth bucket
+                const COLS = 8;                          // horizontal samples per band
+                const counts = new Map();                // bucketedDepth -> count
+                let maxCount = 0;
 
-                setHasData(points.length > 0);
+                rows.forEach(item => {
+                    const depth = Number(item.scroll_depth) || 0;
+                    const b = Math.round(depth / BUCKET) * BUCKET;
+                    const next = (counts.get(b) || 0) + 1;
+                    counts.set(b, next);
+                    if (next > maxCount) maxCount = next;
+                });
 
+                const points = [];
+                counts.forEach((count, depth) => {
+                    for (let c = 0; c < COLS; c++) {
+                        const x = ((c + 0.5) / COLS) * CANVAS_W;
+                        points.push([x, depth, count]);
+                    }
+                });
+
+                // Large radius + heavy blur melts adjacent samples into bands.
                 heat.data(points);
-                heat.max(10);
-                heat.draw();
+                heat.radius(55, 45);
+                heat.max(Math.max(1, maxCount));
+                heat.draw(0.08);
 
             })
             .catch((err) => {
@@ -131,7 +196,7 @@ export default function ScrollHeatmap() {
                     onFocus={(e) => { e.target.style.borderColor = '#667eea'; e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.2)'; }}
                     onBlur={(e) => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)'; }}
                 >
-                    {pages.length === 0 && <option value="">Loading pages...</option>}
+                    {pages.length === 0 && <option value="">No website routes for selected site</option>}
                     {pages.map(p => (
                         <option key={p} value={p}>{p}</option>
                     ))}
@@ -146,14 +211,31 @@ export default function ScrollHeatmap() {
                 </div>
             </div>
 
-            <div style={{ marginTop: 20 }}>
+            <div style={{ marginTop: 20, display: 'flex', gap: 16, alignItems: 'flex-start' }}>
                 <canvas
                     ref={canvasRef}
                     style={{
                         border: "1px solid #ccc",
-                        background: "#f5f5f5"
+                        background: "#f5f5f5",
+                        borderRadius: 8,
+                        maxWidth: '100%',
+                        height: 'auto'
                     }}
                 />
+                {!loadingSites && !loading && !error && hasData && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 4 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#475569' }}>Reach</div>
+                        <div style={{
+                            width: 14, height: 220, borderRadius: 7, border: '1px solid #e2e8f0',
+                            background: 'linear-gradient(to bottom, #ff0000, #ffff00, #00ff00, #00ffff, rgba(0,0,255,0.5))'
+                        }} />
+                        <div style={{ fontSize: 12, color: '#64748b' }}>Most</div>
+                        <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 'auto' }}>Few</div>
+                        <div style={{ fontSize: 11, color: '#94a3b8', maxWidth: 90, marginTop: 8 }}>
+                            Top = page top. Bands show how far visitors scroll.
+                        </div>
+                    </div>
+                )}
             </div>
 
             {loadingSites || loading ? <p style={{ color: '#64748b', marginTop: 12 }}>Loading scroll heatmap...</p> : null}
